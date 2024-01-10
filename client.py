@@ -10,10 +10,13 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     while True:
         text = input("Message: ")
         message = Message(text)
-        print(message.encode_message())
+        json_message = message.encode_message(text)
+        print(f"JSON message before sent: {json_message}")
+        s.send(json_message)
+        print("Message sent successfully")
 
-
-        # mes_len = f"{len(message):<{HEADER_LENGTH}}".encode("utf-8")
-        # mes = message.encode("utf-8")
-        # s.send(mes_len)
-        # s.send(mes)
+        while True:
+            server_answer = s.recv(1024).decode("utf-8")
+            print(f"Received answer before decoding: {server_answer}")
+            print(message.decode_message(server_answer))
+            break
