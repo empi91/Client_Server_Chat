@@ -7,7 +7,6 @@ class Message:
         self.text = text
 
     def encode_message(self, text):
-        text_len = len(text)
         text_message = {
             "Message": text
         }

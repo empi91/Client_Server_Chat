@@ -1,10 +1,11 @@
 import socket
 import time
+import errno
 from message import Message
 
 HOST = '127.0.0.1'
 PORT = 65432
-SERVER_VERSION = 1.0
+SERVER_VERSION = '1.0.1'
 
 
 def check_command(com):
@@ -50,19 +51,19 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         print(f"Connected: {addr}")
         while True:
             mess = conn.recv(1024).decode("utf-8")
-            print(f"Messsage received: {mess}")
             if not mess:
                 break
             message = Message(mess)
             command = message.decode_message(mess)
             print(command)
 
-            answer = check_command(command)
-            print(f"Answer before encoding: {answer}")
-            json_answer = message.encode_message(answer)
-            print(f"Answer after encoding: {json_answer}")
-            s.send(json_answer)
-            print("Answer sent successfully")
+            try:
+                answer = check_command(command)
+                json_answer = message.encode_message(answer)
+                conn.send(json_answer)
 
+            except IOError as e:
+                if e.errno == errno.EPIPE:
+                    pass
 
 print(f"Connection with {addr} lost, closing server")
