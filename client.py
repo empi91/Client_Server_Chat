@@ -10,7 +10,7 @@ HEADER_LENGTH = 2
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))
     while True:
-        text = input("Message: ")
+        text = input("Command: ")
         message = Message(text)
         json_message = message.encode_message(text)
         s.send(json_message)

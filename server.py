@@ -21,14 +21,14 @@ def check_command(com):
 
         case "uptime":
             uptime_dict = {
-                "Server uptime": time.time() - start_time,
+                "Server uptime": calc_uptime(start_time),
             }
             return uptime_dict
 
         case "info":
             info_dict = {
                 "Server version": SERVER_VERSION,
-                "Server start date": start_time,
+                "Server start date": f"{start_time.tm_year}/{start_time.tm_mon}/{start_time[2]} {start_time.tm_hour}:{start_time.tm_min}:{start_time.tm_sec}"
             }
             return info_dict
 
@@ -40,12 +40,18 @@ def check_command(com):
             return error_msg
 
 
+def calc_uptime(start):
+    curr_time = time.gmtime()
+    uptime = f"{curr_time[0] - start[0]} Years {curr_time[1] - start[1]} Months {curr_time[2] - start[2]} Days {curr_time[3] - start[3]} Hours {curr_time[4] - start[4]} Minutes {curr_time[5] - start[5]} Seconds"
+
+    return uptime
+
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind((HOST, PORT))
     s.listen()
-    start_time = time.time()
+    start_time = time.gmtime()
     conn, addr = s.accept()
     with conn:
         print(f"Connected: {addr}")
