@@ -3,11 +3,10 @@ import time
 import errno
 from message import Message
 
-SERVER_VERSION = '1.0.1'
-
-
 class Server:
     start_time = 0
+    SERVER_VERSION = '1.0.1'
+
     def __init__(self, host, port):
         self.host = host
         self.port = port
@@ -59,7 +58,7 @@ class Server:
 
             case "info":
                 info_dict = {
-                    "Server version": SERVER_VERSION,
+                    "Server version": self.SERVER_VERSION,
                     "Server start date": f"{self.start_time.tm_year}/{self.start_time.tm_mon}/{self.start_time[2]} {self.start_time.tm_hour}:{self.start_time.tm_min}:{self.start_time.tm_sec}"
                 }
                 return info_dict
