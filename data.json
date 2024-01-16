@@ -1,3 +1,16 @@
-{"Filip": {"username": "Filip", "password": "password", "type": "admin"}}
-{"Agata": {"username": "Agata", "password": "kotek", "type": "user"}}
-{"Jan": {"username": "Jan", "password": "rower", "type": "user"}}
+[
+  {
+    "Filip": {
+      "username": "Filip",
+      "password": "password",
+      "type": "admin"
+    }
+  },
+  {
+    "Agata": {
+      "username": "Agata",
+      "password": "kotek",
+      "type": "user"
+    }
+  }
+]
