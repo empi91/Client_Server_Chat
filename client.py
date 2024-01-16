@@ -11,7 +11,7 @@ PORT = 65432
 PATH = pathlib.Path.cwd() / "data.json"
 
 class Client:
-    database = {}
+    database = []
     is_signed_in = False
     database_exists = False
     database_empty = False
@@ -29,38 +29,40 @@ class Client:
 
     def check_database_empty(self):
         if os.path.getsize(self.database_path) == 0:
+            print(os.path.getsize(self.database_path))
             return True
         return False
 
     def load_database(self):
-        self.check_database_exists()
-        if self.database_empty:
-            return 0
+        try:
+            with self.database_path.open(mode="r", encoding="utf-8") as file:
+                self.database = json.load(file)
+        except FileNotFoundError:
+            self.database = []
 
-        with self.database_path.open(mode="r", encoding="utf-8") as file:
-            for line in file:
-                user = json.loads(line)
-                for key, value in user.items():
-                    self.database[key] = value
+        for user in self.database:
+            print(user["username"])
 
 
     def add_to_database(self, username, user_data):
         new_user = {username: user_data}
-        json_database = json.dumps(new_user)
+        try:
+            with self.database_path.open(mode="r", encoding="utf-8") as file:
+                users = json.load(file)
+        except FileNotFoundError:
+            users = []
 
-        with self.database_path.open(mode="a", encoding="utf-8") as database:
-            if self.check_database_empty():
-                database.write(json_database)
-                return 0
-            database.write("\n")
-            database.write(json_database)
-            return 0
+        users.append(new_user)
+
+        with self.database_path.open(mode="w", encoding="utf-8") as file:
+            json.dump(users, file, indent=2)
+
 
     def login(self):
         uname = input("Enter username: ")
         registered = False
 
-        for user, user_data in self.database.items():
+        for user in self.database:
             if uname == user:
                 registered = True
 
@@ -121,5 +123,4 @@ while not client.is_signed_in:
 
 client.start_client()
 
-#     # TODO If NOT then save password and right to file
 
