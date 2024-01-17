@@ -20,36 +20,34 @@ class Client:
         self.port = port
         self.database_path = database_path
 
-    def load_database(self):
-        try:
-            with self.database_path.open(mode="r", encoding="utf-8") as file:
-                self.database = json.load(file)
-        except FileNotFoundError:
-            self.database = {}
+    def send_data(self, header, data, s):
+        message = Message(data)
+        json_message = message.encode_message(header, data)
+        s.send(json_message)
+        return 0
 
-    def add_to_database(self, username, user_data):
-        self.database[username] = user_data
-        with self.database_path.open(mode="w", encoding="utf-8") as file:
-            json.dump(self.database, file, indent=2)
-
-    def login(self):
+    def login(self, socket):
         uname = input("Enter username: ")
         registered = False
 
-        for user in self.database:
-            if uname == user:
-                registered = True
+        self.send_data("username", uname, socket)
+
+        # for user in self.database:
+        #     if uname == user:
+        #         registered = True
 
         password = input("Enter password: ")
 
-        if registered:
-            if self.check_password(uname, password):
-                self.username = uname
-                self.is_signed_in = True
-                return 0
-        else:
-            self.is_signed_in = self.register_new_user(uname, password)
-            return 0
+        self.send_data("password", password, socket)
+
+        # if registered:
+        #     if self.check_password(uname, password):
+        #         self.username = uname
+        #         self.is_signed_in = True
+        #         return 0
+        # else:
+        #     self.is_signed_in = self.register_new_user(uname, password)
+        #     return 0
 
     def check_password(self, uname, password):
         if self.database[uname]["password"] == password:
@@ -71,30 +69,34 @@ class Client:
     def start_client(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((self.host, self.port))
-        while True:
-            text = input(f"{self.username}>: ")
-
-            message = Message(text)
-            json_message = message.encode_message(text)
-            s.send(json_message)
-
-            json_answer = s.recv(1024).decode("utf-8")
-            decoded_answer = message.decode_message(json_answer)
-            if type(decoded_answer) == dict:
-                for key, value in decoded_answer.items():
-                    print(f"{key}: {value}")
-            elif type(decoded_answer) == bool:
-                if decoded_answer:
-                    s.close()
-                    sys.exit()
+        return s
+        # while True:
+        #     self.login()
+        #
+        #     text = input(f"{self.username}>: ")
+        #     # self.send_data(text)
+        #
+        #     message = Message(text)
+        #     json_message = message.encode_message(text)
+        #     s.send(json_message)
+        #
+        #     json_answer = s.recv(1024).decode("utf-8")
+        #     decoded_answer = message.decode_message(json_answer)
+        #     if type(decoded_answer) == dict:
+        #         for key, value in decoded_answer.items():
+        #             print(f"{key}: {value}")
+        #     elif type(decoded_answer) == bool:
+        #         if decoded_answer:
+        #             s.close()
+        #             sys.exit()
 
 
 client = Client(HOST, PORT, PATH)
-client.load_database()
+connection = client.start_client()
 
 while not client.is_signed_in:
-    client.login()
+    client.login(connection)
 
-client.start_client()
+
 
 
