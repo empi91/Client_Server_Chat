@@ -1,15 +1,34 @@
 import socket
 import time
 import errno
+import pathlib
+import json
+
 from message import Message
 
+
 class Server:
+    database = {}
     start_time = 0
     SERVER_VERSION = '1.0.1'
 
-    def __init__(self, host, port):
+    def __init__(self, host, port, database_path):
         self.host = host
         self.port = port
+        self.database_path = database_path
+
+    def load_database(self):
+        try:
+            with self.database_path.open(mode="r", encoding="utf-8") as file:
+                self.database = json.load(file)
+        except FileNotFoundError:
+            self.database = {}
+        print("Database loaded")
+
+    def add_to_database(self, username, user_data):
+        self.database[username] = user_data
+        with self.database_path.open(mode="w", encoding="utf-8") as file:
+            json.dump(self.database, file, indent=2)
 
     def start_server(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -18,20 +37,22 @@ class Server:
         s.listen()
         self.start_time = time.gmtime()
         print("Server online")
+
+        self.load_database()
         
         conn, addr = s.accept()
         with conn:
             print(f"Client connected: {addr}")
             while True:
-                mess = conn.recv(1024).decode("utf-8")
-                if not mess:
+                received_data = conn.recv(1024).decode("utf-8")
+                if not received_data:
                     break
-                message = Message(mess)
-                command = message.decode_message(mess)
-                print(command)
+                message = Message(received_data)
+                decoded_header, decoded_message = message.decode_message(received_data)
+                print(decoded_header)
 
                 try:
-                    answer = self.check_command(command)
+                    answer = self.check_command(decoded_message)
                     json_answer = message.encode_message(answer)
                     conn.send(json_answer)
 
