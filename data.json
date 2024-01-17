@@ -1,16 +1,17 @@
-[
-  {
-    "Filip": {
-      "username": "Filip",
-      "password": "password",
-      "type": "admin"
-    }
+{
+  "Filip": {
+    "username": "Filip",
+    "password": "password",
+    "type": "admin"
   },
-  {
-    "Agata": {
-      "username": "Agata",
-      "password": "kotek",
-      "type": "user"
-    }
+  "Agata": {
+    "username": "Agata",
+    "password": "kotek",
+    "type": "user"
+  },
+  "Jan": {
+    "username": "Jan",
+    "password": "rower",
+    "type": "user"
   }
-]
+}

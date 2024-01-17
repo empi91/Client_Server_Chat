@@ -11,10 +11,8 @@ PORT = 65432
 PATH = pathlib.Path.cwd() / "data.json"
 
 class Client:
-    database = []
+    database = {}
     is_signed_in = False
-    database_exists = False
-    database_empty = False
     username = ''
 
     def __init__(self, host, port, database_path):
@@ -22,41 +20,17 @@ class Client:
         self.port = port
         self.database_path = database_path
 
-    def check_database_exists(self):
-        if not self.database_path.is_file():
-            self.database_path.touch()
-        return self.database_path.is_file()
-
-    def check_database_empty(self):
-        if os.path.getsize(self.database_path) == 0:
-            print(os.path.getsize(self.database_path))
-            return True
-        return False
-
     def load_database(self):
         try:
             with self.database_path.open(mode="r", encoding="utf-8") as file:
                 self.database = json.load(file)
         except FileNotFoundError:
-            self.database = []
-
-        for user in self.database:
-            print(user["username"])
-
+            self.database = {}
 
     def add_to_database(self, username, user_data):
-        new_user = {username: user_data}
-        try:
-            with self.database_path.open(mode="r", encoding="utf-8") as file:
-                users = json.load(file)
-        except FileNotFoundError:
-            users = []
-
-        users.append(new_user)
-
+        self.database[username] = user_data
         with self.database_path.open(mode="w", encoding="utf-8") as file:
-            json.dump(users, file, indent=2)
-
+            json.dump(self.database, file, indent=2)
 
     def login(self):
         uname = input("Enter username: ")
