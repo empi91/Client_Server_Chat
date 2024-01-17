@@ -2,6 +2,7 @@ import socket
 import time
 import json
 import os
+import sys
 
 from message import Message
 
@@ -40,6 +41,11 @@ class Server:
             json.dump(self.database, file, indent=2)
         self.load_database()
 
+    def save_database(self):
+        with self.database_path.open(mode="w", encoding="utf-8") as file:
+            json.dump(self.database, file, indent=2)
+        self.load_database()
+
     def receive_data(self):
         while True:
             received_data = self.socket.recv(255).decode("utf-8")
@@ -51,6 +57,7 @@ class Server:
 
     def send_data(self, header, data):
         message = Message(data)
+        # print(f"Sending data: {header}: {data}")
         json_message = message.encode_message(header, data)
         self.socket.send(json_message)
         return 0
@@ -75,7 +82,8 @@ class Server:
         user_data = {
             "username": username,
             "password": password,
-            "type": acc_type
+            "type": acc_type,
+            "inbox": {}
         }
         self.add_to_database(username, user_data)
         print(f"User {self.username} registered")
@@ -90,6 +98,39 @@ class Server:
             self.client_signed_in = self.check_password(self.username, self.password)
         else:
             self.send_data("type", "Enter account type: ")
+
+    def calc_uptime(self):
+        curr_time = time.gmtime()
+        uptime = f"{curr_time[0] - self.start_time[0]} Years {curr_time[1] - self.start_time[1]} Months {curr_time[2] - self.start_time[2]} Days {curr_time[3] - self.start_time[3]} Hours {curr_time[4] - self.start_time[4]} Minutes {curr_time[5] - self.start_time[5]} Seconds"
+        return uptime
+
+    def process_query(self, header, message):
+        if header == "credentials":
+            self.login(message)
+        elif header == "type":
+            if self.register_new_user(self.username, self.password, message):
+                self.client_signed_in = True
+                self.send_data("acc", "login")
+        elif header == "stop":
+            self.socket.close()
+            sys.exit()
+        elif header == "info":
+            info_dict = {
+                "Server version": self.SERVER_VERSION,
+                "Server start date": f"{self.start_time.tm_year}/{self.start_time.tm_mon}/{self.start_time[2]} {self.start_time.tm_hour}:{self.start_time.tm_min}:{self.start_time.tm_sec}",
+                "Server uptime": self.calc_uptime()
+            }
+            return "server_info", info_dict
+        elif header == "delete":
+            if self.check_if_registered(message["deleted_user"]):
+                if self.database[message["calling_user"]]["type"] == "admin":
+                    del self.database[message["deleted_user"]]
+                    self.save_database()
+                    return "answer", f"User {message['deleted_user']} was removed from database"
+                return "answer", f"User {message['calling_user']} cannot delete other users"
+            return "answer", f"User {message['deleted_user']} is not registered in database"
+
+
 
     def start_server(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -108,16 +149,13 @@ class Server:
 
             while not self.client_signed_in:
                 header, data = self.receive_data()
-                if header == "credentials":
-                    self.login(data)
-                elif header == "type":
-                    if self.register_new_user(self.username, self.password, data):
-                        self.client_signed_in = True
-
-            self.send_data("acc", "login")
+                self.process_query(header, data)
 
             while True:
-                pass
+                header, data = self.receive_data()
+                ans_header, ans_message = self.process_query(header, data)
+                self.send_data(ans_header, ans_message)
+
                 # received_data = conn.recv(255).decode("utf-8")
                 # if not received_data:
                 #     break
@@ -134,8 +172,4 @@ class Server:
                 #         pass
 
         
-    def calc_uptime(self):
-        curr_time = time.gmtime()
-        uptime = f"{curr_time[0] - self.start_time[0]} Years {curr_time[1] - self.start_time[1]} Months {curr_time[2] - self.start_time[2]} Days {curr_time[3] - self.start_time[3]} Hours {curr_time[4] - self.start_time[4]} Minutes {curr_time[5] - self.start_time[5]} Seconds"
 
-        return uptime

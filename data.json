@@ -3,5 +3,10 @@
     "username": "Filip",
     "password": "password",
     "type": "admin"
+  },
+  "Agata": {
+    "username": "Agata",
+    "password": "kotek",
+    "type": "user"
   }
 }
