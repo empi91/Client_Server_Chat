@@ -1,16 +1,19 @@
 import socket
 import time
-import errno
-import pathlib
 import json
+import os
 
 from message import Message
 
-
 class Server:
+    SERVER_VERSION = '1.0.1'
+
     database = {}
     start_time = 0
-    SERVER_VERSION = '1.0.1'
+    client_signed_in = False
+    socket = None
+    username = ""
+    password = ""
 
     def __init__(self, host, port, database_path):
         self.host = host
@@ -19,77 +22,117 @@ class Server:
 
     def load_database(self):
         try:
-            with self.database_path.open(mode="r", encoding="utf-8") as file:
-                self.database = json.load(file)
+            if os.path.getsize(self.database_path) == 0:
+                self.database = {}
+            else:
+                with self.database_path.open(mode="r", encoding="utf-8") as file:
+                    self.database = json.load(file)
         except FileNotFoundError:
             self.database = {}
-        print("Database loaded")
+        except json.decoder.JSONDecodeError as e:
+            print(f"Error decoding JSON: {e}")
+            print("Problematic JSON text:")
+            print(e.doc)
 
     def add_to_database(self, username, user_data):
         self.database[username] = user_data
         with self.database_path.open(mode="w", encoding="utf-8") as file:
             json.dump(self.database, file, indent=2)
+        self.load_database()
+
+    def receive_data(self):
+        while True:
+            received_data = self.socket.recv(255).decode("utf-8")
+            if not received_data:
+                break
+            message = Message(received_data)
+            decoded_header, decoded_message = message.decode_message(received_data)
+            return decoded_header, decoded_message
+
+    def send_data(self, header, data):
+        message = Message(data)
+        json_message = message.encode_message(header, data)
+        self.socket.send(json_message)
+        return 0
+
+    def check_if_registered(self, uname):
+        for user in self.database:
+            if uname == user:
+                return True
+        return False
+
+    def check_password(self, uname, password):
+        if self.database[uname]["password"] == password:
+            # print("Password correct, welcome back!")
+            self.send_data("acc", "login")
+            return True
+        # print("Wrong password, try again!")
+        self.send_data("password", "wrong")
+
+        return False
+
+    def register_new_user(self, username, password, acc_type):
+        user_data = {
+            "username": username,
+            "password": password,
+            "type": acc_type
+        }
+        self.add_to_database(username, user_data)
+        print(f"User {self.username} registered")
+        return True
+
+    def login(self, login_data):
+        self.username = login_data["username"]
+        self.password = login_data["password"]
+
+        client_signed_up = self.check_if_registered(self.username)
+        if client_signed_up:
+            self.client_signed_in = self.check_password(self.username, self.password)
+        else:
+            self.send_data("type", "Enter account type: ")
 
     def start_server(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.start_time = time.gmtime()
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind((self.host, self.port))
         s.listen()
-        self.start_time = time.gmtime()
         print("Server online")
 
         self.load_database()
-        
+
         conn, addr = s.accept()
         with conn:
+            self.socket = conn
             print(f"Client connected: {addr}")
+
+            while not self.client_signed_in:
+                header, data = self.receive_data()
+                if header == "credentials":
+                    self.login(data)
+                elif header == "type":
+                    if self.register_new_user(self.username, self.password, data):
+                        self.client_signed_in = True
+
+            self.send_data("acc", "login")
+
             while True:
-                received_data = conn.recv(1024).decode("utf-8")
-                if not received_data:
-                    break
-                message = Message(received_data)
-                decoded_header, decoded_message = message.decode_message(received_data)
-                print(decoded_header)
+                pass
+                # received_data = conn.recv(255).decode("utf-8")
+                # if not received_data:
+                #     break
+                # message = Message(received_data)
+                # decoded_header, decoded_message = message.decode_message(received_data)
+                #
+                # try:
+                #     answer = message.process_message(decoded_message)
+                #     json_answer = message.encode_message(answer)
+                #     conn.send(json_answer)
+                #
+                # except IOError as e:
+                #     if e.errno == errno.EPIPE:
+                #         pass
 
-                try:
-                    answer = self.check_command(decoded_message)
-                    json_answer = message.encode_message(answer)
-                    conn.send(json_answer)
-
-                except IOError as e:
-                    if e.errno == errno.EPIPE:
-                        pass
-    
-    def check_command(self, com):
-        match com:
-            case "help":
-                comm_dict = {
-                    "help": "Displays list of all server commands",
-                    "uptime": "Returns server lifetime",
-                    "info": "Returns server version and start date",
-                    "stop": "Stops server and client simultaneously"
-                }
-                return comm_dict
-
-            case "uptime":
-                uptime_dict = {
-                    "Server uptime": self.calc_uptime(),
-                }
-                return uptime_dict
-
-            case "info":
-                info_dict = {
-                    "Server version": self.SERVER_VERSION,
-                    "Server start date": f"{self.start_time.tm_year}/{self.start_time.tm_mon}/{self.start_time[2]} {self.start_time.tm_hour}:{self.start_time.tm_min}:{self.start_time.tm_sec}"
-                }
-                return info_dict
-
-            case "stop":
-                shutdown = True
-                return shutdown
-            case _:
-                error_msg = "Wrong command, try again"
-                return error_msg
         
     def calc_uptime(self):
         curr_time = time.gmtime()

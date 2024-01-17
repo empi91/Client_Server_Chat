@@ -12,6 +12,7 @@ PATH = pathlib.Path.cwd() / "data.json"
 
 class Client:
     database = {}
+    socket = None
     is_signed_in = False
     username = ''
 
@@ -20,82 +21,77 @@ class Client:
         self.port = port
         self.database_path = database_path
 
-    def send_data(self, header, data, s):
+    def receive_data(self):
+        while True:
+            received_data = self.socket.recv(255).decode("utf-8")
+            if not received_data:
+                break
+            message = Message(received_data)
+            decoded_header, decoded_message = message.decode_message(received_data)
+            return decoded_header, decoded_message
+
+    def send_data(self, header, data):
         message = Message(data)
         json_message = message.encode_message(header, data)
-        s.send(json_message)
+        self.socket.send(json_message)
         return 0
 
-    def login(self, socket):
-        uname = input("Enter username: ")
-        registered = False
-
-        self.send_data("username", uname, socket)
-
-        # for user in self.database:
-        #     if uname == user:
-        #         registered = True
-
+    def login(self):
+        self.username = input("Enter username: ")
         password = input("Enter password: ")
-
-        self.send_data("password", password, socket)
-
-        # if registered:
-        #     if self.check_password(uname, password):
-        #         self.username = uname
-        #         self.is_signed_in = True
-        #         return 0
-        # else:
-        #     self.is_signed_in = self.register_new_user(uname, password)
-        #     return 0
-
-    def check_password(self, uname, password):
-        if self.database[uname]["password"] == password:
-            print("Password correct, welcome back!")
-            return True
-        print("Wrong password, try again!")
-        return False
-
-    def register_new_user(self, uname, password):
-        acc_type = input("Enter account type (admin/user): ")
-        user_data = {
-            "username": uname,
-            "password": password,
-            "type": acc_type
+        credentials = {
+            "username": self.username,
+            "password": password
         }
-        self.add_to_database(uname, user_data)
+        self.send_data("credentials", credentials)
+
+    def send_acc_type(self):
+        acc_type = input("Enter account type (admin/user): ")
+        self.send_data("type", acc_type)
         return True
 
     def start_client(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((self.host, self.port))
-        return s
-        # while True:
-        #     self.login()
-        #
-        #     text = input(f"{self.username}>: ")
-        #     # self.send_data(text)
-        #
-        #     message = Message(text)
-        #     json_message = message.encode_message(text)
-        #     s.send(json_message)
-        #
-        #     json_answer = s.recv(1024).decode("utf-8")
-        #     decoded_answer = message.decode_message(json_answer)
-        #     if type(decoded_answer) == dict:
-        #         for key, value in decoded_answer.items():
-        #             print(f"{key}: {value}")
-        #     elif type(decoded_answer) == bool:
-        #         if decoded_answer:
-        #             s.close()
-        #             sys.exit()
+        self.socket = s
+
+        self.login()
+        while not self.is_signed_in:
+            header, data = self.receive_data()
+            if header == "type":
+                self.send_acc_type()
+            elif header == "password":
+                print("Wrong password, try again!")
+                self.login()
+            elif header == "acc" and data == "login":
+                self.is_signed_in = True
+
+        print(f"User {self.username} logged successfully")
+
+        while True:
+            pass
+
+            # self.send_data(text)
+            #
+            # message = Message(text)
+            # json_message = message.encode_message(text)
+            # s.send(json_message)
+
+            # json_answer = s.recv(1024).decode("utf-8")
+            # decoded_answer = message.decode_message(json_answer)
+            # if type(decoded_answer) == dict:
+            #     for key, value in decoded_answer.items():
+            #         print(f"{key}: {value}")
+            # elif type(decoded_answer) == bool:
+            #     if decoded_answer:
+            #         s.close()
+            #         sys.exit()
 
 
 client = Client(HOST, PORT, PATH)
-connection = client.start_client()
+client.start_client()
 
-while not client.is_signed_in:
-    client.login(connection)
+
 
 
 
