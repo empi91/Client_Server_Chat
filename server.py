@@ -8,7 +8,6 @@ from message import Message
 
 class Server:
     SERVER_VERSION = '1.0.1'
-
     database = {}
     start_time = 0
     client_signed_in = False
@@ -46,7 +45,7 @@ class Server:
 
     def receive_data(self):
         while True:
-            received_data = self.socket.recv(255).decode("utf-8")
+            received_data = self.socket.recv(512).decode("utf-8")
             if not received_data:
                 break
             message = Message(received_data)
@@ -55,7 +54,6 @@ class Server:
 
     def send_data(self, header, data):
         message = Message(data)
-        # print(f"Sending data: {header}: {data}")
         json_message = message.encode_message(header, data)
         self.socket.send(json_message)
         return 0
@@ -68,13 +66,8 @@ class Server:
 
     def check_password(self, uname, password):
         if self.database[uname]["password"] == password:
-            # print("Password correct, welcome back!")
-            self.send_data("acc", "login")
-            return True
-        # print("Wrong password, try again!")
-        self.send_data("password", "wrong")
-
-        return False
+            return True, "acc", "login"
+        return False, "password", "wrong"
 
     def register_new_user(self, username, password, acc_type):
         user_data = {
@@ -93,9 +86,10 @@ class Server:
 
         client_signed_up = self.check_if_registered(self.username)
         if client_signed_up:
-            self.client_signed_in = self.check_password(self.username, self.password)
+            self.client_signed_in, header, message = self.check_password(self.username, self.password)
+            return header, message
         else:
-            self.send_data("type", "Enter account type: ")
+            return "type", "Enter account type: "
 
     def calc_uptime(self):
         curr_time = time.gmtime()
@@ -118,7 +112,6 @@ class Server:
         return "error", f"User {removed_user} is not registered in database"
 
     def add_to_inbox(self, sender, receiver, message, size):
-        position = str(size + 1)
         self.database[receiver]["inbox"].append({
             "sender": sender,
             "message": message
@@ -156,11 +149,11 @@ class Server:
 
     def process_query(self, header, message):
         if header == "credentials":
-            self.login(message)
+            return self.login(message)
         elif header == "type":
             if self.register_new_user(self.username, self.password, message):
                 self.client_signed_in = True
-                self.send_data("acc", "login")
+                return "acc", "login"
         elif header == "stop":
             self.socket.close()
             sys.exit()
@@ -202,13 +195,10 @@ class Server:
 
             while not self.client_signed_in:
                 header, data = self.receive_data()
-                self.process_query(header, data)
+                ans_header, ans_message = self.process_query(header, data)
+                self.send_data(ans_header, ans_message)
 
             while True:
                 header, data = self.receive_data()
                 ans_header, ans_message = self.process_query(header, data)
                 self.send_data(ans_header, ans_message)
-
-                # except IOError as e:
-                #     if e.errno == errno.EPIPE:
-                #         pass

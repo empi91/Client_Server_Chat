@@ -4,22 +4,5 @@
     "password": "password",
     "type": "admin",
     "inbox": []
-  },
-  "Agata": {
-    "username": "Agata",
-    "password": "kotek",
-    "type": "user",
-    "inbox": []
-  },
-  "Jan": {
-    "username": "Jan",
-    "password": "rower",
-    "type": "user",
-    "inbox": [
-      {
-        "sender": "Filip",
-        "message": "Hi!"
-      }
-    ]
   }
 }
