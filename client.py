@@ -1,8 +1,6 @@
 import socket
 import sys
 import pathlib
-import json
-import os
 
 from message import Message
 
@@ -20,6 +18,7 @@ class Client:
     database = {}
     socket = None
     is_signed_in = False
+    removing_itself = False
     username = ''
 
     def __init__(self, host, port, database_path):
@@ -55,19 +54,35 @@ class Client:
         }
         self.send_data("credentials", credentials)
 
-    def send_acc_type(self):
+    def send_account_type(self):
         acc_type = input("Enter account type (admin/user): ")
         self.send_data("type", acc_type)
         return True
 
+    def send_message(self):
+        receiver = input("Enter received name: ")
+        message = input("Enter message (up to 255 characters): ")
+        while len(message) > 255:
+            print("Message too long, try again")
+            message = input("Enter message (up to 255 characters): ")
+        messsage_dict = {
+            "sender": self.username,
+            "receiver": receiver,
+            "message": message,
+        }
+        self.send_data("message", messsage_dict)
+
+
     def process_query(self, command):
         match command:
             case "!message":
-                pass
+                self.send_message()
             case "!inbox":
                 pass
             case "!delete":
                 uname_to_delete = input("Enter name of the user to be removed from database: ")
+                if self.username == uname_to_delete:
+                    self.removing_itself = True
                 remove_user = {
                     "calling_user": self.username,
                     "deleted_user": uname_to_delete
@@ -89,17 +104,25 @@ class Client:
 
     def process_answer(self, header, message):
         if header == "type":
-            self.send_acc_type()
+            self.send_account_type()
         elif header == "password":
             print("Wrong password, try again!")
             self.login()
-        elif header == "acc" and message == "login":
-            self.is_signed_in = True
+        elif header == "acc":
+            if message == "login":
+                self.is_signed_in = True
+            elif message == "user_deleted":
+                if self.removing_itself:
+                    print(f"Your account deleted successfully")
+                    self.process_query("!stop")
+                print(f"User account deleted successfully")
+            elif message == "message_delivered":
+                print("Message delivered successfully")
         elif header == "server_info":
             print(f"Server version: {message['Server version']}\n"
                   f"Server start date: {message['Server start date']}\n"
                   f"Server uptime: {message['Server uptime']}")
-        elif header == "answer":
+        elif header == "error":
             print(message)
 
         pass
@@ -116,7 +139,7 @@ class Client:
         print(f"User {self.username} logged successfully")
         print(MANUAL)
 
-        while True:
+        while self.is_signed_in:
             command = input(f"{self.username} >:")
             error_msg = self.process_query(command)
             if error_msg:

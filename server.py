@@ -37,9 +37,7 @@ class Server:
 
     def add_to_database(self, username, user_data):
         self.database[username] = user_data
-        with self.database_path.open(mode="w", encoding="utf-8") as file:
-            json.dump(self.database, file, indent=2)
-        self.load_database()
+        self.save_database()
 
     def save_database(self):
         with self.database_path.open(mode="w", encoding="utf-8") as file:
@@ -104,6 +102,46 @@ class Server:
         uptime = f"{curr_time[0] - self.start_time[0]} Years {curr_time[1] - self.start_time[1]} Months {curr_time[2] - self.start_time[2]} Days {curr_time[3] - self.start_time[3]} Hours {curr_time[4] - self.start_time[4]} Minutes {curr_time[5] - self.start_time[5]} Seconds"
         return uptime
 
+    def delete_user(self, calling_user, removed_user):
+        if self.check_if_registered(removed_user):
+            if self.database[calling_user]["type"] == "admin":
+                del self.database[removed_user]
+                self.save_database()
+                return "acc", "user_deleted"
+            elif calling_user == removed_user and self.username == removed_user:
+                del self.database[removed_user]
+                self.username = ""
+                self.client_signed_in = False
+                return "acc", "user_deleted"
+            return "error", f"User {calling_user} cannot delete other users"
+        return "error", f"User {removed_user} is not registered in database"
+
+    def add_to_inbox(self, sender, receiver, message, size):
+        position = str(size + 1)
+        self.database[receiver]["inbox"][position] = {
+            "sender": sender,
+            "message": message,
+        }
+        self.save_database()
+        return "acc", "message_delivered"
+    def check_inbox(self, user):
+        return len(self.database[user]["inbox"])
+
+    def decode_message(self, message):
+        sender = message["sender"]
+        recv = message["receiver"]
+        mess = message["message"]
+
+        if not self.check_if_registered(recv):
+            return "error", "Receiver doesn't exist"
+        inbox_size = self.check_inbox(recv)
+        if inbox_size >= 5:
+            return "error", "Receiver inbox full"
+        return self.add_to_inbox(sender, recv, mess, inbox_size)
+
+
+
+
     def process_query(self, header, message):
         if header == "credentials":
             self.login(message)
@@ -122,14 +160,11 @@ class Server:
             }
             return "server_info", info_dict
         elif header == "delete":
-            if self.check_if_registered(message["deleted_user"]):
-                if self.database[message["calling_user"]]["type"] == "admin":
-                    del self.database[message["deleted_user"]]
-                    self.save_database()
-                    return "answer", f"User {message['deleted_user']} was removed from database"
-                return "answer", f"User {message['calling_user']} cannot delete other users"
-            return "answer", f"User {message['deleted_user']} is not registered in database"
-
+            header, message = self.delete_user(message["calling_user"], message["deleted_user"])
+            return header, message
+        elif header == "message":
+            header, message = self.decode_message(message)
+            return header, message
 
 
     def start_server(self):
