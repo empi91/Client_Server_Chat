@@ -4,5 +4,11 @@
     "password": "password",
     "type": "admin",
     "inbox": []
+  },
+  "Kuba": {
+    "username": "Kuba",
+    "password": "kajak",
+    "type": "user",
+    "inbox": []
   }
 }
