@@ -28,12 +28,11 @@ class Client:
 
     def receive_data(self):
         while True:
-            received_data = self.socket.recv(255).decode("utf-8")
+            received_data = self.socket.recv(512).decode("utf-8")
             if not received_data:
                 break
             message = Message(received_data)
             decoded_header, decoded_message = message.decode_message(received_data)
-            # print(f"Receiving data: {decoded_header}: {decoded_message}")
             return decoded_header, decoded_message
 
     def send_data(self, header, data):
@@ -45,9 +44,6 @@ class Client:
     def login(self):
         self.username = input("Enter username: ")
         password = input("Enter password: ")
-        # TODO hardcoded for testing purposes
-        # self.username = "Filip"
-        # password = "password"
         credentials = {
             "username": self.username,
             "password": password
@@ -56,8 +52,7 @@ class Client:
 
     def send_account_type(self):
         acc_type = input("Enter account type (admin/user): ")
-        self.send_data("type", acc_type)
-        return True
+        return "type", acc_type
 
     def send_message(self):
         receiver = input("Enter received name: ")
@@ -70,23 +65,17 @@ class Client:
             "receiver": receiver,
             "message": message,
         }
-        self.send_data("message", message_dict)
-
-    def check_inbox(self):
-        self.send_data("check_inbox", self.username)
-
-    def read_inbox(self):
-        self.send_data("read_inbox", self.username)
-        pass
+        return "message", message_dict
 
     def process_query(self, command):
         match command:
             case "!message":
-                self.send_message()
+                header, message = self.send_message()
+                return header, message
             case "!inbox":
-                self.check_inbox()
+                return "check_inbox", self.username
             case "!read":
-                self.read_inbox()
+                return "read_inbox", self.username
             case "!delete":
                 uname_to_delete = input("Enter name of the user to be removed from database: ")
                 if self.username == uname_to_delete:
@@ -95,24 +84,24 @@ class Client:
                     "calling_user": self.username,
                     "deleted_user": uname_to_delete
                 }
-                self.send_data("delete", remove_user)
+                return "delete", remove_user
             case "!help":
                 print(MANUAL)
-                return 1
+                return "error_msg", 1
             case "!info":
-                self.send_data("info", "")
-                return 0
+                return "info", ""
             case "!stop":
                 self.send_data("stop", "")
                 self.socket.close()
                 sys.exit()
             case _:
                 error_msg = "Wrong command, try again"
-                return error_msg
+                return "error_msg", error_msg
 
     def process_answer(self, header, message):
         if header == "type":
-            self.send_account_type()
+            header, message = self.send_account_type()
+            self.send_data(header, message)
         elif header == "password":
             print("Wrong password, try again!")
             self.login()
@@ -136,12 +125,9 @@ class Client:
             print(f"You have {message} unread messages")
             if message > 0:
               print(f"To read first one type !read")
-
         elif header == "inbox_message":
             print(f"Message from {message['sender']}:\n"
                   f"{message['message']}")
-
-        pass
 
     def start_client(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -158,13 +144,14 @@ class Client:
 
         while self.is_signed_in:
             command = input(f"{self.username} >:")
-            error_msg = self.process_query(command)
-            if error_msg:
-                if isinstance(error_msg, str):
-                    print(error_msg)
+            header, message = self.process_query(command)
+            if header == "error_msg":
+                if isinstance(message, str):
+                    print(message)
                 else:
                     pass
             else:
+                self.send_data(header, message)
                 header, data = self.receive_data()
                 self.process_answer(header, data)
 
