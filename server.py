@@ -81,7 +81,7 @@ class Server:
             "username": username,
             "password": password,
             "type": acc_type,
-            "inbox": {}
+            "inbox": []
         }
         self.add_to_database(username, user_data)
         print(f"User {self.username} registered")
@@ -112,18 +112,20 @@ class Server:
                 del self.database[removed_user]
                 self.username = ""
                 self.client_signed_in = False
+                self.save_database()
                 return "acc", "user_deleted"
             return "error", f"User {calling_user} cannot delete other users"
         return "error", f"User {removed_user} is not registered in database"
 
     def add_to_inbox(self, sender, receiver, message, size):
         position = str(size + 1)
-        self.database[receiver]["inbox"][position] = {
+        self.database[receiver]["inbox"].append({
             "sender": sender,
-            "message": message,
-        }
+            "message": message
+        })
         self.save_database()
         return "acc", "message_delivered"
+
     def check_inbox(self, user):
         return len(self.database[user]["inbox"])
 
@@ -139,8 +141,18 @@ class Server:
             return "error", "Receiver inbox full"
         return self.add_to_inbox(sender, recv, mess, inbox_size)
 
-
-
+    def read_inbox(self, message):
+        inbox = self.database[message]["inbox"]
+        if len(inbox) > 0:
+            message = {
+                "sender": inbox[0]["sender"],
+                "message": inbox[0]["message"],
+            }
+            inbox.pop(0)
+            self.save_database()
+            return "inbox_message", message
+        else:
+            return "error", "Inbox is empty"
 
     def process_query(self, header, message):
         if header == "credentials":
@@ -164,6 +176,12 @@ class Server:
             return header, message
         elif header == "message":
             header, message = self.decode_message(message)
+            return header, message
+        elif header == "check_inbox":
+            message = self.check_inbox(message)
+            return "inbox_size", message
+        elif header == "read_inbox":
+            header, message = self.read_inbox(message)
             return header, message
 
 
@@ -191,20 +209,6 @@ class Server:
                 ans_header, ans_message = self.process_query(header, data)
                 self.send_data(ans_header, ans_message)
 
-                # received_data = conn.recv(255).decode("utf-8")
-                # if not received_data:
-                #     break
-                # message = Message(received_data)
-                # decoded_header, decoded_message = message.decode_message(received_data)
-                #
-                # try:
-                #     answer = message.process_message(decoded_message)
-                #     json_answer = message.encode_message(answer)
-                #     conn.send(json_answer)
-                #
                 # except IOError as e:
                 #     if e.errno == errno.EPIPE:
                 #         pass
-
-        
-

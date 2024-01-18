@@ -2,26 +2,24 @@
   "Filip": {
     "username": "Filip",
     "password": "password",
-    "type": "user",
-    "inbox": {}
+    "type": "admin",
+    "inbox": []
   },
   "Agata": {
     "username": "Agata",
     "password": "kotek",
     "type": "user",
-    "inbox": {
-      "message1": "blablabla",
-      "message2": "blebleble",
-      "3": {
-        "sender": "Filip",
-        "message": "Hello beautiful!!"
-      }
-    }
+    "inbox": []
   },
   "Jan": {
     "username": "Jan",
     "password": "rower",
     "type": "user",
-    "inbox": {}
+    "inbox": [
+      {
+        "sender": "Filip",
+        "message": "Hi!"
+      }
+    ]
   }
 }
