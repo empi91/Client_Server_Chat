@@ -6,19 +6,21 @@ import sys
 
 from message import Message
 
+MAX_MESSAGE_SIZE = 512
+
 class Server:
     SERVER_VERSION = '1.0.1'
-    database = {}
-    start_time = 0
-    client_signed_in = False
-    socket = None
-    username = ""
-    password = ""
 
     def __init__(self, host, port, database_path):
         self.host = host
         self.port = port
         self.database_path = database_path
+        self.database = {}
+        self.start_time = None
+        self.client_signed_in = False
+        self.socket = None
+        self.username = ""
+        self.password = ""
 
     def load_database(self):
         try:
@@ -45,7 +47,7 @@ class Server:
 
     def receive_data(self):
         while True:
-            received_data = self.socket.recv(512).decode("utf-8")
+            received_data = self.socket.recv(MAX_MESSAGE_SIZE).decode("utf-8")
             if not received_data:
                 break
             message = Message(received_data)
@@ -111,7 +113,7 @@ class Server:
             return "error", f"User {calling_user} cannot delete other users"
         return "error", f"User {removed_user} is not registered in database"
 
-    def add_to_inbox(self, sender, receiver, message, size):
+    def add_to_inbox(self, sender, receiver, message):
         self.database[receiver]["inbox"].append({
             "sender": sender,
             "message": message
@@ -132,7 +134,7 @@ class Server:
         inbox_size = self.check_inbox(recv)
         if inbox_size >= 5:
             return "error", "Receiver inbox full"
-        return self.add_to_inbox(sender, recv, mess, inbox_size)
+        return self.add_to_inbox(sender, recv, mess)
 
     def read_inbox(self, message):
         inbox = self.database[message]["inbox"]

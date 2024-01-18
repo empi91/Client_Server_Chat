@@ -7,6 +7,7 @@ from message import Message
 HOST = '127.0.0.1'
 PORT = 65432
 PATH = pathlib.Path.cwd() / "data.json"
+MAX_MESSAGE_SIZE = 512
 MANUAL = "If you want to write new message, type '!message'\n\
 If you want to check your inbox, type '!inbox'\n\
 If you want to delete an account (admin only), type '!delete'\n\
@@ -15,20 +16,19 @@ If you need to see this manual again, type '!help'\n\
 If you want to exit, type '!stop'"
 
 class Client:
-    database = {}
-    socket = None
-    is_signed_in = False
-    removing_itself = False
-    username = ''
-
     def __init__(self, host, port, database_path):
         self.host = host
         self.port = port
         self.database_path = database_path
+        self.database = {}
+        self.socket = None
+        self.is_signed_in = False
+        self.removing_itself = False
+        self.username = ""
 
     def receive_data(self):
         while True:
-            received_data = self.socket.recv(512).decode("utf-8")
+            received_data = self.socket.recv(MAX_MESSAGE_SIZE).decode("utf-8")
             if not received_data:
                 break
             message = Message(received_data)
