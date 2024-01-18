@@ -43,11 +43,11 @@ class Client:
         return 0
 
     def login(self):
-        # self.username = input("Enter username: ")
-        # password = input("Enter password: ")
+        self.username = input("Enter username: ")
+        password = input("Enter password: ")
         # TODO hardcoded for testing purposes
-        self.username = "Filip"
-        password = "password"
+        # self.username = "Filip"
+        # password = "password"
         credentials = {
             "username": self.username,
             "password": password
@@ -65,20 +65,28 @@ class Client:
         while len(message) > 255:
             print("Message too long, try again")
             message = input("Enter message (up to 255 characters): ")
-        messsage_dict = {
+        message_dict = {
             "sender": self.username,
             "receiver": receiver,
             "message": message,
         }
-        self.send_data("message", messsage_dict)
+        self.send_data("message", message_dict)
 
+    def check_inbox(self):
+        self.send_data("check_inbox", self.username)
+
+    def read_inbox(self):
+        self.send_data("read_inbox", self.username)
+        pass
 
     def process_query(self, command):
         match command:
             case "!message":
                 self.send_message()
             case "!inbox":
-                pass
+                self.check_inbox()
+            case "!read":
+                self.read_inbox()
             case "!delete":
                 uname_to_delete = input("Enter name of the user to be removed from database: ")
                 if self.username == uname_to_delete:
@@ -124,8 +132,17 @@ class Client:
                   f"Server uptime: {message['Server uptime']}")
         elif header == "error":
             print(message)
+        elif header == "inbox_size":
+            print(f"You have {message} unread messages")
+            if message > 0:
+              print(f"To read first one type !read")
+
+        elif header == "inbox_message":
+            print(f"Message from {message['sender']}:\n"
+                  f"{message['message']}")
 
         pass
+
     def start_client(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((self.host, self.port))
