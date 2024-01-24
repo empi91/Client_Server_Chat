@@ -2,7 +2,7 @@ import socket
 import sys
 import pathlib
 
-from message import Message
+from connection import Connection
 
 HOST = '127.0.0.1'
 PORT = 65432
@@ -26,20 +26,15 @@ class Client:
         self.removing_itself = False
         self.username = ""
 
-    def receive_data(self):
-        while True:
-            received_data = self.socket.recv(MAX_MESSAGE_SIZE).decode("utf-8")
-            if not received_data:
-                break
-            message = Message(received_data)
-            decoded_header, decoded_message = message.decode_message(received_data)
-            return decoded_header, decoded_message
+# ----------------------- Connection part -----------------------
 
     def send_data(self, header, data):
-        message = Message(data)
-        json_message = message.encode_message(header, data)
+        connection = Connection(self.socket)
+        json_message = connection.encode_message(header, data)
         self.socket.send(json_message)
         return 0
+
+# ----------------------- User login/register part -----------------------
 
     def login(self):
         self.username = input("Enter username: ")
@@ -48,7 +43,11 @@ class Client:
             "username": self.username,
             "password": password
         }
-        self.send_data("credentials", credentials)
+        connection = Connection(self.socket)
+        connection.send_data("credentials", credentials)
+        # self.send_data("credentials", credentials)
+
+# ----------------------- Query part -----------------------
 
     def send_account_type(self):
         acc_type = input("Enter account type (admin/user): ")
@@ -129,30 +128,32 @@ class Client:
             print(f"Message from {message['sender']}:\n"
                   f"{message['message']}")
 
+    # ----------------------- Client part -----------------------
     def start_client(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((self.host, self.port))
         self.socket = s
+        connection = Connection(self.socket)
 
         self.login()
         while not self.is_signed_in:
-            header, data = self.receive_data()
-            self.process_answer(header, data)
+            header, data = connection.receive_data()
+            self.process_answer(header, data) #TODO Move to query
 
         print(f"User {self.username} logged successfully")
         print(MANUAL)
 
         while self.is_signed_in:
             command = input(f"{self.username} >:")
-            header, message = self.process_query(command)
+            header, message = self.process_query(command) #TODO Move to query
             if header == "error_msg":
                 if isinstance(message, str):
                     print(message)
                 else:
                     pass
             else:
-                self.send_data(header, message)
-                header, data = self.receive_data()
+                connection.send_data(header, message)
+                header, data = connection.receive_data()
                 self.process_answer(header, data)
 
 client = Client(HOST, PORT, PATH)
