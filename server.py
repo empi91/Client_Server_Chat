@@ -4,7 +4,7 @@ import json
 import os
 import sys
 
-from message import Message
+from connection import Connection
 
 MAX_MESSAGE_SIZE = 512
 
@@ -21,6 +21,8 @@ class Server:
         self.socket = None
         self.username = ""
         self.password = ""
+
+# ----------------------- Database part -----------------------
 
     def load_database(self):
         try:
@@ -45,20 +47,7 @@ class Server:
             json.dump(self.database, file, indent=2)
         self.load_database()
 
-    def receive_data(self):
-        while True:
-            received_data = self.socket.recv(MAX_MESSAGE_SIZE).decode("utf-8")
-            if not received_data:
-                break
-            message = Message(received_data)
-            decoded_header, decoded_message = message.decode_message(received_data)
-            return decoded_header, decoded_message
-
-    def send_data(self, header, data):
-        message = Message(data)
-        json_message = message.encode_message(header, data)
-        self.socket.send(json_message)
-        return 0
+# ----------------------- User login / register part -----------------------
 
     def check_if_registered(self, uname):
         for user in self.database:
@@ -92,6 +81,8 @@ class Server:
             return header, message
         else:
             return "type", "Enter account type: "
+
+# ----------------------- Query part -----------------------
 
     def calc_uptime(self):
         curr_time = time.gmtime()
@@ -179,7 +170,7 @@ class Server:
             header, message = self.read_inbox(message)
             return header, message
 
-
+# ----------------------- Server part -----------------------
     def start_server(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.start_time = time.gmtime()
@@ -188,19 +179,21 @@ class Server:
         s.listen()
         print("Server online")
 
-        self.load_database()
+        self.load_database() #TODO move to database.py
 
         conn, addr = s.accept()
         with conn:
             self.socket = conn
+            connection = Connection(self.socket)
             print(f"Client connected: {addr}")
 
             while not self.client_signed_in:
-                header, data = self.receive_data()
-                ans_header, ans_message = self.process_query(header, data)
-                self.send_data(ans_header, ans_message)
+                header, data = connection.receive_data()
+
+                ans_header, ans_message = self.process_query(header, data) #TODO move to query
+                connection.send_data(ans_header, ans_message)
 
             while True:
-                header, data = self.receive_data()
+                header, data = connection.receive_data()
                 ans_header, ans_message = self.process_query(header, data)
-                self.send_data(ans_header, ans_message)
+                connection.send_data(ans_header, ans_message)
