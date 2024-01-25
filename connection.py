@@ -1,8 +1,6 @@
 # connection.py
-import socket
-import json
 
-from query import Query
+import json
 
 MAX_MESSAGE_SIZE = 512
 
@@ -40,5 +38,3 @@ class Connection:
                 break
             decoded_header, decoded_message = self.decode_message(received_data)
             return decoded_header, decoded_message
-
-
