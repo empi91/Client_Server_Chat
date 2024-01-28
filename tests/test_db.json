@@ -1,0 +1,19 @@
+{
+  "Filip": {
+    "username": "Filip",
+    "password": "password",
+    "acc_type": "admin",
+    "inbox": [
+      {
+        "sender": "Agata",
+        "message": "Hello"
+      }
+    ]
+  },
+  "Agata": {
+    "username": "Agata",
+    "password": "kotek",
+    "acc_type": "user",
+    "inbox": []
+  }
+}

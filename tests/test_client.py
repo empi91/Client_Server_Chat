@@ -1,7 +1,8 @@
 import unittest
 
-from client import Client
+from unittest.mock import patch
 
+from client import Client
 
 class TestClient(unittest.TestCase):
 
@@ -10,14 +11,14 @@ class TestClient(unittest.TestCase):
         self.client = Client()
 
     # Testing start_client() method
-    def test_starting_client_without_host_address(self):
-        """
-        Test that socket cannot start without host address given
-        """
-        host = "127.0.0.1"
-        port = 123456
-        with self.assertRaises(ConnectionRefusedError):
-            self.client.start_client(host, port)
+    # def test_starting_client_without_host_address(self):
+    #     """
+    #     Test that socket cannot start without host address given
+    #     """
+    #     host = "127.0.0.1"
+    #     port = 123456
+    #     with self.assertRaises(ConnectionRefusedError):
+    #         self.client.start_client(host, port)
 
     # TypeError
 

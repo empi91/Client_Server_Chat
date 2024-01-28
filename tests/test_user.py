@@ -1,5 +1,4 @@
 import unittest
-import user
 
 from unittest.mock import patch
 
@@ -15,6 +14,9 @@ class TestUser(unittest.TestCase):
     # Testing check_if_registered() method
     @patch("user.Database")
     def test_check_if_registered_user_is_registered(self, mock_database):
+        """
+        Test if registered user is recognised correctly
+        """
         mock_database.return_value.database = {
             "Filip": {},
             "Jan": {}
@@ -23,6 +25,9 @@ class TestUser(unittest.TestCase):
 
     @patch("user.Database")
     def test_check_if_not_registered_user_is_registered(self, mock_database):
+        """
+        Test if non-registered user is recognised correctly
+        """
         mock_database.return_value.database = {
             "Filip": {},
             "Jan": {}
@@ -32,6 +37,9 @@ class TestUser(unittest.TestCase):
     # Testing check_password()
     @patch("user.Database")
     def test_check_correct_password(self, mock_database):
+        """
+        Test if the right password is recognised correctly
+        """
         mock_database.return_value.database = {
             "user": {"password": "password123"}
         }
@@ -39,6 +47,9 @@ class TestUser(unittest.TestCase):
 
     @patch("user.Database")
     def test_check_wrong_password(self, mock_database):
+        """
+        Test if the wrong password recognised correctly
+        """
         mock_database.return_value.database = {
             "user": {"password": "password12345"}
         }
@@ -49,3 +60,6 @@ class TestUser(unittest.TestCase):
     # Testing login_user() method
 
     # Testing delete_user() method
+
+if __name__ == '__main__':
+    unittest.main()
