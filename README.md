@@ -7,7 +7,7 @@ Currently in development
 ### TODO:
 - ~~Add user registration and autenthication mechanism~~
 - ~~Add inbox to store user's messages~~
-- Add tests
+- ~~Add tests~~
 - And multi-threading for several clients at once
 - Add PostgreSQL database to manage user data
 - Add GUI
