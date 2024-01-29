@@ -1,4 +1,5 @@
 import unittest
+import time
 
 from unittest.mock import patch
 
@@ -9,9 +10,6 @@ class TestQuery(unittest.TestCase):
     #setUp()
     def setUp(self):
         self.query = Query()
-
-    # Test process_query() method
-
 
     # Test check_inbox() method
     @patch("query.Database")
@@ -130,7 +128,6 @@ class TestQuery(unittest.TestCase):
             "message": "Hello!"
         }
         self.assertEqual(self.query.send_message(message), ("ack", "message_delivered"))
-
     @patch("user.Database")
     def test_sending_message_to_non_existing_user(self, mock_user_database):
         """
@@ -150,7 +147,6 @@ class TestQuery(unittest.TestCase):
             "message": "Hello!"
         }
         self.assertEqual(self.query.send_message(message), ("error", "Receiver doesn't exist"))
-
     @patch("user.Database")
     @patch("query.Database")
     def test_sending_message_to__existing_user_with_full_inbox(self, mock_query_database, mock_user_database):
@@ -190,10 +186,22 @@ class TestQuery(unittest.TestCase):
         self.assertEqual(self.query.send_message(message), ("error", "Receiver inbox full"))
 
     # Test add_to_inbox() method
-
-
-    # Test calc_uptime() method
-
+    @patch("query.Database")
+    def test_adding_message_to_inbox(self, mock_query_database):
+        """
+        Testing if adding a new message to inbox works
+        :param mock_query_database:
+        :return:
+        """
+        mock_query_database.return_value.database = {
+            "test_user": {
+                "username": "test_user",
+                "inbox": []
+            }
+        }
+        length_before = self.query.check_inbox("test_user")[1]
+        self.assertEqual(self.query.add_to_inbox("test_user_2", "test_user", "test_message"), ("ack", "message_delivered"))
+        self.assertEqual(self.query.check_inbox("test_user")[1], length_before + 1)
 
 if __name__ == '__main__':
     unittest.main()
