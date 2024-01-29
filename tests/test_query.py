@@ -6,7 +6,6 @@ from unittest.mock import patch
 from query import Query
 
 class TestQuery(unittest.TestCase):
-
     #setUp()
     def setUp(self):
         self.query = Query()

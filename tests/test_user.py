@@ -5,7 +5,6 @@ from unittest.mock import patch
 from user import User
 
 class TestUser(unittest.TestCase):
-
     #setUp()
     def setUp(self):
         self.user = User()
@@ -74,7 +73,7 @@ class TestUser(unittest.TestCase):
     @patch("socket.socket")
     @patch("builtins.input", side_effect=["Filip", "password"])
     def test_sending_user_login_data(self, mock_input, mock_socket, mock_connection):
-        mock_connection.return_value.receive_data.side_effect = [("ack", "message")]
+        mock_connection.return_value.receive_data.side_effect = [("ack", "")]
         self.user.login_user(mock_socket)
         mock_connection.send_data_assert_called_once_with("login", {"username": "Filip", "password": "password"})
 
@@ -83,7 +82,7 @@ class TestUser(unittest.TestCase):
     @patch("builtins.input", side_effect=["Filip", "password"])
     def test_processing_ack_login_answers(self, mock_input, mock_socket, mock_connection):
         mock_connection_instance = mock_connection.return_value
-        mock_connection_instance.receive_data.side_effect = [("ack", "message")]
+        mock_connection_instance.receive_data.side_effect = [("ack", "")]
 
         self.assertEqual(self.user.login_user(mock_socket), 0)
         self.assertIsNone(self.user.type)
@@ -94,7 +93,7 @@ class TestUser(unittest.TestCase):
     @patch("builtins.input", side_effect=["Filip", "password", "admin"])
     def test_processing_add_account_type_login_answers(self, mock_input, mock_socket, mock_connection):
         mock_connection_instance = mock_connection.return_value
-        mock_connection_instance.receive_data.side_effect = [("add_account_type", "message")]
+        mock_connection_instance.receive_data.side_effect = [("add_account_type", "")]
 
         self.user.login_user(mock_socket)
 
@@ -108,7 +107,7 @@ class TestUser(unittest.TestCase):
     @patch("builtins.input", side_effect=["Filip", "password", "Filip", "password"])
     def test_processing_error_login_answers(self, mock_input, mock_socket, mock_connection):
         mock_connection_instance = mock_connection.return_value
-        mock_connection_instance.receive_data.side_effect = [("error", "Wrong password, try again"), ("ack", "message")]
+        mock_connection_instance.receive_data.side_effect = [("error", ""), ("ack", "")]
 
         self.assertEqual(self.user.login_user(mock_socket), 0)
         self.assertEqual(mock_connection_instance.receive_data.call_count, 2)
