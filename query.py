@@ -109,7 +109,7 @@ class Query:
             "message": message
         })
         database.save_database()
-        return "acc", "message_delivered"
+        return "ack", "message_delivered"
 
     def calc_uptime(self):
         curr_time = time.gmtime()

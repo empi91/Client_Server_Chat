@@ -1,14 +1,16 @@
-import unittest
+# import unittest
+#
+# from unittest.mock import patch
+#
+# from client import Client
 
-from unittest.mock import patch
-
-from client import Client
-
-class TestClient(unittest.TestCase):
+# class TestClient(unittest.TestCase):
+#
+#     pass
 
     # setUp()
-    def setUp(self):
-        self.client = Client()
+    # def setUp(self):
+    #     self.client = Client()
 
     # Testing start_client() method
     # def test_starting_client_without_host_address(self):
@@ -33,5 +35,5 @@ class TestClient(unittest.TestCase):
     # Testing send_message() method (??)
 
 
-if __name__ == '__main__':
-    unittest.main()
+# if __name__ == '__main__':
+#     unittest.main()

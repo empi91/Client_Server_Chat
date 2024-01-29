@@ -8,14 +8,14 @@ class User:
     def __init__(self):
         self.username = ""
         self.password = ""
-        self.type = ""
+        self.type = None
         self.user_login = False
         pass
 
     def check_if_registered(self, username):
         database = Database()
         for user in database.database:
-            if username == user:
+          if username == user:
                 return True
         return False
 
@@ -26,11 +26,14 @@ class User:
         return False
 
     def register_user(self, user_data):
-        user_data["inbox"] = []
-        database = Database()
-        database.add_to_database(user_data["username"], user_data)
-        print(f"User {user_data['username']} registered")
-        return "ack", "Registration successful"
+        try:
+            user_data["inbox"] = []
+            database = Database()
+            database.add_to_database(user_data["username"], user_data)
+            print(f"User {user_data['username']} registered")
+            return "ack", "Registration successful"
+        except TypeError as e:
+            print(f"Error: {e}")
 
     def login_user(self, socket):
         connection = Connection(socket)
@@ -45,7 +48,6 @@ class User:
 
             connection.send_data("login", credentials)
             query_header, query_message = connection.receive_data()
-
             if query_header == "ack":
                 self.user_login = True
                 print(query_message)
@@ -63,6 +65,6 @@ class User:
         if self.check_if_registered(removed_user):
             if database.database[calling_user]["acc_type"] == "admin":
                 database.remove_from_database(removed_user)
-                return "acc", "user_deleted"
+                return "ack", "user_deleted"
             return "error", f"User {calling_user} cannot delete other users"
         return "error", f"User {removed_user} is not registered in database"
