@@ -1,12 +1,10 @@
 # database.py
 
 import pathlib
-import os
-import json
-import psycopg2
-
-from psycopg2 import sql
 from configparser import ConfigParser
+
+import psycopg2
+from psycopg2 import sql
 
 PATH = pathlib.Path.cwd() / "data.json"
 
@@ -17,7 +15,7 @@ class Database:
         self.config = {}
 
         self.load_config("postgresql")
-        self.create_database("client_server_db")
+        self.create_database("cs_db")
         self.load_config("client_server_db")
         self.create_tables()
 
@@ -44,7 +42,7 @@ class Database:
             cursor.close()
             connection.close()
         except psycopg2.errors.DuplicateDatabase as e:
-            print(e)
+            pass
         except (psycopg2.DatabaseError, Exception) as e:
             print(e)
 
@@ -73,61 +71,55 @@ class Database:
                     for query in queries:
                         cursor.execute(query)
 
-
+        except psycopg2.errors.DuplicateTable:
+            pass
         except (psycopg2.DatabaseError, Exception) as e:
             print(e)
-    def connect_to_db(self):
 
-        pass
-
-    def send_query(self, query):
+    def execute_query(self, query, parameters):
         try:
             with psycopg2.connect(**self.config) as connection:
                 with connection.cursor() as cursor:
-
-                    cursor.execute(query)
-
-
+                    cursor.execute(query, parameters)
+                    rows = cursor.fetchone()
+                    if rows:
+                        return True
+                    else:
+                        return False
         except (psycopg2.DatabaseError, Exception) as e:
             print(e)
+            return False
 
-    #add user
-    #remove user
-    #send message
-    #check inbox
-    #read inbox
-    #login
+    def add_to_database(self, user_data):
+        query = ("INSERT INTO users(username, password, account_type)\n"
+                 "VALUES(%s, %s, %s) RETURNING user_id;")
+        if self.execute_query(query, (user_data["username"], user_data["password"], user_data["acc_type"])):
+            return True
+        return False
 
-    def load_database(self):
-        try:
-            if os.path.getsize(PATH) == 0:
-                self.database = {}
-            else:
-                with PATH.open(mode="r", encoding="utf-8") as file:
-                    self.database = json.load(file)
-        except FileNotFoundError:
-            self.database = {}
-        except json.decoder.JSONDecodeError as e:
-            print(f"Error decoding JSON: {e}")
-            print("Problematic JSON text:")
-            print(e.doc)
+    def check_user_registered(self, username):
+        query = """SELECT user_id FROM users WHERE username = %s;"""
+        return self.execute_query(query, (username,))
 
-    def add_to_database(self, username, user_data):
-        self.database[username] = user_data
-        self.save_database()
-
-    def save_database(self):
-        with PATH.open(mode="w", encoding="utf-8") as file:
-            json.dump(self.database, file, indent=2)
-        self.load_database()
+    def check_user_password(self, username, password):
+        query = """SELECT user_id FROM users WHERE username = %s AND password = %s;"""
+        return self.execute_query(query, (username, password))
 
     def remove_from_database(self, removed_user):
-        del self.database[removed_user]
-        self.save_database()
-        pass
+        query = """ DELETE FROM users WHERE username = %s;"""
+        self.execute_query(query, (removed_user,))
 
 
 db = Database()
+credentials = {
+        "username": "Filip",
+        "password": "password",
+        "acc_type": "user"
+            }
+# db.add_to_database(credentials)
+db.remove_from_database("Jan")
+# db.check_user_registered("Krowa")
+# db.check_user_password("Agata", "kotk")
 # db.load_config()
 # db.load_database()
 # db.create_database()
