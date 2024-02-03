@@ -14,24 +14,21 @@ class User:
 
     def check_if_registered(self, username):
         database = Database()
-        for user in database.database:
-          if username == user:
-                return True
-        return False
+        return database.check_user_registered(username)
 
     def check_password(self, username, password):
         database = Database()
-        if database.database[username]["password"] == password:
-            return True
-        return False
+        return database.check_user_password(username, password)
 
     def register_user(self, user_data):
         try:
             user_data["inbox"] = []
             database = Database()
-            database.add_to_database(user_data["username"], user_data)
-            print(f"User {user_data['username']} registered")
-            return "ack", "Registration successful"
+            if database.add_to_database(user_data):
+                print(f"User {user_data['username']} registered")
+                return "ack", "Registration successful"
+            else:
+                return "error", "USer with this username already exists"
         except TypeError as e:
             print(f"Error: {e}")
 
