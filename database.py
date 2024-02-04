@@ -89,17 +89,3 @@ class Database:
         except (psycopg2.DatabaseError, Exception) as e:
             print(e)
             return False
-
-db = Database()
-credentials = {
-        "username": "Kaja",
-        "password": "kajak",
-        "acc_type": "user"
-            }
-# db.add_to_database(credentials)
-# db.check_user_registered("Kaja")
-# db.check_user_password("Kaja", "kajak")
-# db.load_config()
-# db.load_database()
-# db.create_database()
-# db.remove_from_database("Agata")

@@ -112,18 +112,17 @@ class Query:
         return self.add_to_inbox(sender, recv, mess)
 
     def add_to_inbox(self, sender, receiver, message):
-        self.database.database[receiver]["inbox"].append({
-            "sender": sender,
-            "message": message
-        })
-        self.database.save_database()
-        return "ack", "message_delivered"
+        query = """INSERT INTO messages (receiver_id, sender, message)
+                    SELECT receiver.user_id, sender.user_id, %s
+                    FROM users AS receiver, users AS sender
+                    WHERE receiver.username = %s AND sender.username = %s
+                    RETURNING message_id;"""
+
+        self.database.execute_query(query, (message, receiver, sender))
+
+        return "ack", "Message delivered"
 
     def calc_uptime(self):
         curr_time = time.gmtime()
         uptime = f"{curr_time[0] - self.start_time[0]} Years {curr_time[1] - self.start_time[1]} Months {curr_time[2] - self.start_time[2]} Days {curr_time[3] - self.start_time[3]} Hours {curr_time[4] - self.start_time[4]} Minutes {curr_time[5] - self.start_time[5]} Seconds"
         return uptime
-
-# query = Query()
-# query.check_inbox("Kaja")
-# query.read_inbox("Filip")
