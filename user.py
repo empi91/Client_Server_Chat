@@ -15,11 +15,15 @@ class User:
 
     def check_if_registered(self, username):
         query = """SELECT user_id FROM users WHERE username = %s;"""
-        return self.database.execute_query(query, (username,))
+        if self.database.execute_query(query, (username,)):
+            return True
+        return False
 
     def check_password(self, username, password):
         query = """SELECT user_id FROM users WHERE username = %s AND password = %s;"""
-        return self.database.execute_query(query, (username, password))
+        if self.database.execute_query(query, (username, password)):
+            return True
+        return False
 
     def register_user(self, user_data):
         try:
@@ -31,7 +35,7 @@ class User:
                 print(f"User {user_data['username']} registered")
                 return "ack", "Registration successful"
             else:
-                return "error", "USer with this username already exists"
+                return "error", "User with this username already exists"
         except TypeError as e:
             print(f"Error: {e}")
 
@@ -70,17 +74,18 @@ class User:
             if self.check_acc_type(calling_user):
                 if self.database.execute_query(query, (removed_user,)):
                     return "ack", "user_deleted"
+                return "error", "Error while deleting user"
             return "error", f"User {calling_user} cannot delete other users"
         return "error", f"User {removed_user} is not registered in database"
 
 
 
 credentials = {
-        "username": "Kaja",
-        "password": "kajak",
+        "username": "Jan",
+        "password": "rower",
         "acc_type": "user"
             }
-user = User()
+# user = User()
 # user.check_acc_type("Kaja")
 # user.check_acc_type("Filip")
 # user.register_user(credentials)

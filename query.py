@@ -13,6 +13,7 @@ class Query:
         self.user = User()
         self.start_time = time.gmtime()
         self.server_version = 0
+        self.database = Database()
         pass
 
     def process_query(self, header, message):
@@ -73,19 +74,21 @@ class Query:
                   f"Server uptime: {message['Server uptime']}")
 
     def check_inbox(self, message):
-        database = Database()
-        return "inbox", len(database.database[message]["inbox"])
+        query = """select message from messages inner join users on messages.receiver_id = users.user_id WHERE users.username = %s;"""
+        answer = self.database.execute_query(query, (message,))
+        if type(answer) == bool:
+            return "inbox", 0
+        return "inbox", len(answer)
 
     def read_inbox(self, message):
-        database = Database()
-        inbox = database.database[message]["inbox"]
+        inbox = self.database.database[message]["inbox"]
         if len(inbox) > 0:
             message = {
                 "sender": inbox[0]["sender"],
                 "message": inbox[0]["message"],
             }
             inbox.pop(0)
-            database.save_database()
+            self.database.save_database()
             return "message", message
         else:
             return "error", "Inbox is empty"
@@ -103,12 +106,11 @@ class Query:
         return self.add_to_inbox(sender, recv, mess)
 
     def add_to_inbox(self, sender, receiver, message):
-        database = Database()
-        database.database[receiver]["inbox"].append({
+        self.database.database[receiver]["inbox"].append({
             "sender": sender,
             "message": message
         })
-        database.save_database()
+        self.database.save_database()
         return "ack", "message_delivered"
 
     def calc_uptime(self):
@@ -116,5 +118,6 @@ class Query:
         uptime = f"{curr_time[0] - self.start_time[0]} Years {curr_time[1] - self.start_time[1]} Months {curr_time[2] - self.start_time[2]} Days {curr_time[3] - self.start_time[3]} Hours {curr_time[4] - self.start_time[4]} Minutes {curr_time[5] - self.start_time[5]} Seconds"
         return uptime
 
-
+query = Query()
+query.check_inbox("Kaja")
 
