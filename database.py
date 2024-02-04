@@ -81,9 +81,9 @@ class Database:
             with psycopg2.connect(**self.config) as connection:
                 with connection.cursor() as cursor:
                     cursor.execute(query, parameters)
-                    rows = cursor.fetchone()
+                    rows = cursor.fetchall()
                     if rows:
-                        return True
+                        return rows
                     else:
                         return False
         except (psycopg2.DatabaseError, Exception) as e:
