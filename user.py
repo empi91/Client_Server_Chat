@@ -10,21 +10,24 @@ class User:
         self.password = ""
         self.type = None
         self.user_login = False
+        self.database = Database()
         pass
 
     def check_if_registered(self, username):
-        database = Database()
-        return database.check_user_registered(username)
+        query = """SELECT user_id FROM users WHERE username = %s;"""
+        return self.database.execute_query(query, (username,))
 
     def check_password(self, username, password):
-        database = Database()
-        return database.check_user_password(username, password)
+        query = """SELECT user_id FROM users WHERE username = %s AND password = %s;"""
+        return self.database.execute_query(query, (username, password))
 
     def register_user(self, user_data):
         try:
             user_data["inbox"] = []
-            database = Database()
-            if database.add_to_database(user_data):
+            query = ("INSERT INTO users(username, password, account_type)\n"
+                     "VALUES(%s, %s, %s) RETURNING user_id;")
+
+            if self.database.execute_query(query, (user_data["username"], user_data["password"], user_data["acc_type"])):
                 print(f"User {user_data['username']} registered")
                 return "ack", "Registration successful"
             else:
@@ -57,11 +60,29 @@ class User:
                 print(query_message)
         return 0
 
+    def check_acc_type(self, username):
+        query = """SELECT user_id FROM users WHERE username = %s AND account_type = %s;"""
+        return self.database.execute_query(query, (username, "admin"))
+
     def delete_user(self, calling_user, removed_user):
-        database = Database()
+        query = """DELETE FROM users WHERE username = %s RETURNING user_id;"""
         if self.check_if_registered(removed_user):
-            if database.database[calling_user]["acc_type"] == "admin":
-                database.remove_from_database(removed_user)
-                return "ack", "user_deleted"
+            if self.check_acc_type(calling_user):
+                if self.database.execute_query(query, (removed_user,)):
+                    return "ack", "user_deleted"
             return "error", f"User {calling_user} cannot delete other users"
         return "error", f"User {removed_user} is not registered in database"
+
+
+
+credentials = {
+        "username": "Kaja",
+        "password": "kajak",
+        "acc_type": "user"
+            }
+user = User()
+# user.check_acc_type("Kaja")
+# user.check_acc_type("Filip")
+# user.register_user(credentials)
+# print(user.delete_user("Kaja", "Filip"))
+# user.login_user()
