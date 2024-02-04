@@ -90,36 +90,16 @@ class Database:
             print(e)
             return False
 
-    def add_to_database(self, user_data):
-        query = ("INSERT INTO users(username, password, account_type)\n"
-                 "VALUES(%s, %s, %s) RETURNING user_id;")
-        if self.execute_query(query, (user_data["username"], user_data["password"], user_data["acc_type"])):
-            return True
-        return False
-
-    def check_user_registered(self, username):
-        query = """SELECT user_id FROM users WHERE username = %s;"""
-        return self.execute_query(query, (username,))
-
-    def check_user_password(self, username, password):
-        query = """SELECT user_id FROM users WHERE username = %s AND password = %s;"""
-        return self.execute_query(query, (username, password))
-
-    def remove_from_database(self, removed_user):
-        query = """ DELETE FROM users WHERE username = %s;"""
-        self.execute_query(query, (removed_user,))
-
-
 db = Database()
 credentials = {
-        "username": "Filip",
-        "password": "password",
+        "username": "Kaja",
+        "password": "kajak",
         "acc_type": "user"
             }
 # db.add_to_database(credentials)
-db.remove_from_database("Jan")
-# db.check_user_registered("Krowa")
-# db.check_user_password("Agata", "kotk")
+# db.check_user_registered("Kaja")
+# db.check_user_password("Kaja", "kajak")
 # db.load_config()
 # db.load_database()
 # db.create_database()
+# db.remove_from_database("Agata")
