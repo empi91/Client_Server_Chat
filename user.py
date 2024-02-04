@@ -55,6 +55,7 @@ class User:
             if query_header == "ack":
                 self.user_login = True
                 print(query_message)
+                return True
             elif query_header == "add_account_type":
                 self.type = input("Enter account type (admin/user): ")
                 credentials["acc_type"] = self.type
