@@ -78,17 +78,3 @@ class User:
                 return "error", "Error while deleting user"
             return "error", f"User {calling_user} cannot delete other users"
         return "error", f"User {removed_user} is not registered in database"
-
-
-
-credentials = {
-        "username": "Jan",
-        "password": "rower",
-        "acc_type": "user"
-            }
-# user = User()
-# user.check_acc_type("Kaja")
-# user.check_acc_type("Filip")
-# user.register_user(credentials)
-# print(user.delete_user("Kaja", "Filip"))
-# user.login_user()
