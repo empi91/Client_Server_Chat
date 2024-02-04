@@ -29,7 +29,9 @@ class Client:
     def start_client(self, host, port):
         self.socket.connect((host, port))
 
-        self.user.login_user(self.socket)
+        if not self.user.login_user(self.socket):
+            header, data = self.connection.receive_data()
+            self.query.process_query(header, data)
 
         while True:
             command = input(f"{self.user.username} >:")
