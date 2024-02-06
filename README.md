@@ -9,13 +9,14 @@ Currently in development
 - ~~Add inbox to store user's messages~~
 - ~~Add tests~~
 - And multi-threading for several clients at once
-- Add PostgreSQL database to manage user data
+- ~~Add PostgreSQL database to manage user data~~
 - Add GUI
 
 To run start `main.py` to run server and `client.py` to start every new client
 
 ### Requirements:
 - standard Python modules: socket, pathlib, json, time, os
+- `psycopg2` module
 
 
-Client/Server socket-based app for 202/203/204 level of Z2J course
+Client/Server socket-based app for 202/203/204/205 level of Z2J course
