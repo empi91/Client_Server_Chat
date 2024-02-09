@@ -161,3 +161,6 @@ cython_debug/
 
 # JSON database
 .json
+
+# Database config
+.ini

@@ -17,6 +17,6 @@ To run start `main.py` to run server and `client.py` to start every new client
 ### Requirements:
 - standard Python modules: socket, pathlib, json, time, os
 - `psycopg2` module
+- Add `PostgreSQL` credentials in `database/database.ini` file
 
-
-Client/Server socket-based app for 202/203/204/205 level of Z2J course
+Client/Server socket-based app for 202/203/204/205/206 level of Z2J course
