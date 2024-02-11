@@ -14,24 +14,20 @@ class User:
         pass
 
     def check_if_registered(self, username):
-        query = """SELECT user_id FROM users WHERE username = %s;"""
-        if self.database.execute_query(query, (username,)):
+        if self.database.execute_query(self.database.QUERY_DICT["CHECK_IF_REGISTERED"], (username,)):
             return True
         return False
 
     def check_password(self, username, password):
-        query = """SELECT user_id FROM users WHERE username = %s AND password = %s;"""
-        if self.database.execute_query(query, (username, password)):
+        if self.database.execute_query(self.database.QUERY_DICT["CHECK_PASSWORD"], (username, password)):
             return True
         return False
 
     def register_user(self, user_data):
         try:
             user_data["inbox"] = []
-            query = ("INSERT INTO users(username, password, account_type)\n"
-                     "VALUES(%s, %s, %s) RETURNING user_id;")
 
-            if self.database.execute_query(query, (user_data["username"], user_data["password"], user_data["acc_type"])):
+            if self.database.execute_query(self.database.QUERY_DICT["REGISTER_USER"], (user_data["username"], user_data["password"], user_data["acc_type"])):
                 print(f"User {user_data['username']} registered")
                 return "ack", "Registration successful"
             else:
@@ -57,8 +53,13 @@ class User:
                 print(query_message)
                 return True
             elif query_header == "add_account_type":
-                self.type = input("Enter account type (admin/user): ")
-                credentials["acc_type"] = self.type
+                while not self.type:
+                    acc_type = input("Enter account type (admin/user): ")
+                    if acc_type == "admin" or acc_type == "user":
+                        self.type = acc_type
+                        credentials["acc_type"] = self.type
+                    else:
+                        print("Each user can be either admin or user, try again")
                 connection.send_data("account_type", credentials)
                 self.user_login = True
             else:
@@ -66,14 +67,12 @@ class User:
         return 0
 
     def check_acc_type(self, username):
-        query = """SELECT user_id FROM users WHERE username = %s AND account_type = %s;"""
-        return self.database.execute_query(query, (username, "admin"))
+        return self.database.execute_query(self.database.QUERY_DICT["CHECK_ACCOUNT_TYPE"], (username, "admin"))
 
     def delete_user(self, calling_user, removed_user):
-        query = """DELETE FROM users WHERE username = %s RETURNING user_id;"""
         if self.check_if_registered(removed_user):
             if self.check_acc_type(calling_user):
-                if self.database.execute_query(query, (removed_user,)):
+                if self.database.execute_query(self.database.QUERY_DICT["DELETE_USER"], (removed_user,)):
                     return "ack", "user_deleted"
                 return "error", "Error while deleting user"
             return "error", f"User {calling_user} cannot delete other users"

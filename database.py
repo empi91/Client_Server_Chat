@@ -8,8 +8,42 @@ from psycopg2 import sql
 
 PATH = pathlib.Path.cwd() / "data.json"
 
-
 class Database:
+    QUERY_DICT = {
+        "CHECK_INBOX": """SELECT count(*) 
+                            FROM messages 
+                            INNER JOIN users ON messages.receiver_id = users.user_id 
+                            WHERE users.username = %s;""",
+        "READ_INBOX": """SELECT messages.message, sender.username as sender_username, messages.message_id
+                            FROM messages 
+                            INNER JOIN users AS receiver ON messages.receiver_id = receiver.user_id 
+                            INNER JOIN users AS sender ON messages.sender = sender.user_id 
+                            WHERE receiver.username = %s 
+                            LIMIT 1;""",
+        "DELETE_MESSAGE": """DELETE FROM messages 
+                            WHERE message_id = %s 
+                            RETURNING message_id;""",
+        "ADD_MESSAGE_TO_INBOX": """INSERT INTO messages (receiver_id, sender, message)
+                            SELECT receiver.user_id, sender.user_id, %s
+                            FROM users AS receiver, users AS sender
+                            WHERE receiver.username = %s AND sender.username = %s
+                            RETURNING message_id;""",
+        "CHECK_IF_REGISTERED": """SELECT user_id 
+                            FROM users 
+                            WHERE username = %s;""",
+        "CHECK_PASSWORD": """SELECT user_id 
+                            FROM users 
+                            WHERE username = %s AND password = %s;""",
+        "REGISTER_USER": """INSERT INTO users(username, password, account_type)
+                            VALUES(%s, %s, %s) 
+                            RETURNING user_id;""",
+        "CHECK_ACCOUNT_TYPE": """SELECT user_id 
+                            FROM users 
+                            WHERE username = %s AND account_type = %s;""",
+        "DELETE_USER": """DELETE FROM users 
+                            WHERE username = %s 
+                            RETURNING user_id;""",
+    }
     def __init__(self):
         self.init_file = "database/database.ini"
         self.config = {}

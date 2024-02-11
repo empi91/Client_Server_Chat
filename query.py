@@ -74,23 +74,15 @@ class Query:
                   f"Server uptime: {message['Server uptime']}")
 
     def check_inbox(self, message):
-        query = """select count(*) from messages inner join users on messages.receiver_id = users.user_id WHERE users.username = %s;"""
-        answer = self.database.execute_query(query, (message,))
+        answer = self.database.execute_query(self.database.QUERY_DICT["CHECK_INBOX"], (message,))
         return "inbox", answer[0][0]
 
     def read_inbox(self, message):
-        query_read = """SELECT messages.message, sender.username as sender_username, messages.message_id
-                        FROM messages 
-                        INNER JOIN users AS receiver ON messages.receiver_id = receiver.user_id 
-                        INNER JOIN users AS sender ON messages.sender = sender.user_id 
-                        WHERE receiver.username = %s 
-                        LIMIT 1;"""
-        query_delete = """DELETE FROM messages WHERE message_id = %s RETURNING message_id;"""
 
         inbox = self.check_inbox(message)
         if inbox[1] > 0:
-            answer = self.database.execute_query(query_read, (message,))
-            self.database.execute_query(query_delete, (answer[0][2],))
+            answer = self.database.execute_query(self.database.QUERY_DICT["READ_INBOX"], (message,))
+            self.database.execute_query(self.database.QUERY_DICT["DELETE_MESSAGE"], (answer[0][2],))
             message = {
                 "sender": answer[0][1],
                 "message": answer[0][0]
@@ -112,13 +104,8 @@ class Query:
         return self.add_to_inbox(sender, recv, mess)
 
     def add_to_inbox(self, sender, receiver, message):
-        query = """INSERT INTO messages (receiver_id, sender, message)
-                    SELECT receiver.user_id, sender.user_id, %s
-                    FROM users AS receiver, users AS sender
-                    WHERE receiver.username = %s AND sender.username = %s
-                    RETURNING message_id;"""
 
-        self.database.execute_query(query, (message, receiver, sender))
+        self.database.execute_query(self.database.QUERY_DICT["ADD_MESSAGE_TO_INBOX"], (message, receiver, sender))
 
         return "ack", "Message delivered"
 
