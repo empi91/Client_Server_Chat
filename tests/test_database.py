@@ -1,7 +1,13 @@
-import unittest
-import database
+import os
 import pathlib
-from unittest.mock import patch
+import sys
+import unittest
+
+import psycopg2.errors
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import database
 
 from database import Database
 
@@ -19,37 +25,28 @@ class TestDatabase(unittest.TestCase):
             "inbox": []
         }
 
-    # Test load_database() method
-    def test_loading_database_from_json_file(self):
+    # Test create_database() method
+    def test_creating_database(self):
         """
-        Testing if loading database does not return any unexpected errors
+        Testing if database is created properly during creation inti
         """
-        self.assertIsNone(self.database.load_database())
+        query = """SELECT datname FROM pg_database WHERE datname = %s"""
+        self.assertTrue(self.database.execute_query(query, ("cs_db",)))
 
-    # Test add_to_database() method
-    def test_adding_new_user_to_database(self):
+    # Test create_table() method
+    def test_created_db_tables(self):
         """
-        Testing adding new user to database
-        Testing if adding new user does not return any unexpected errors
+        Testing if tables are created properly inside the database
+        :return:
         """
-        self.database.load_database()
-        length_before = len(self.database.database)
-        self.database.add_to_database("test_user1", self.user_data)
+        query = """SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = 'public'"""
+        table_names = ["users", "messages"]
+        tables = self.database.execute_query(query, ())
+        for table, table_name in zip(tables, table_names):
+            self.assertEqual(table[0], table_name)
 
-        self.assertEqual(len(self.database.database), length_before + 1)
-        self.assertIsNone(self.database.add_to_database("test_user2", self.user_data))
-
-    # Test remove_from_database() method
-    def test_removing_user_from_database(self):
-        """
-        Testing removing user from database
-        Testing if removing user does not return any unexpected errors
-        """
-        self.database.load_database()
-        length_before = len(self.database.database)
-        self.database.remove_from_database("test_user1")
-        self.assertEqual(len(self.database.database), length_before - 1)
-        self.assertIsNone(self.database.remove_from_database("test_user2"))
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,6 +1,8 @@
 # database.py
 
 import pathlib
+import sys
+import os
 from configparser import ConfigParser
 
 import psycopg2
@@ -45,7 +47,7 @@ class Database:
                             RETURNING user_id;""",
     }
     def __init__(self):
-        self.init_file = "database/database.ini"
+        self.init_file = os.path.dirname(os.path.abspath(__file__)) + "/database/database.ini"
         self.config = {}
 
         self.load_config("postgresql")
@@ -123,3 +125,7 @@ class Database:
         except (psycopg2.DatabaseError, Exception) as e:
             print(e)
             return False
+
+if __name__ == '__main__':
+    pass
+

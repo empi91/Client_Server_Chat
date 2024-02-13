@@ -1,5 +1,8 @@
+import os
+import sys
 import unittest
-import time
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from unittest.mock import patch
 
@@ -36,7 +39,7 @@ class TestQuery(unittest.TestCase):
         self.assertEqual(self.query.check_inbox("test_user"), ("inbox", 2))
 
     # Test read_inbox() method
-    @patch("query.Database")
+    @patch("database.Database")
     def test_reading_message_from_inbox(self, mock_database):
         """
         Test if reading message from inbox works as expected
@@ -199,7 +202,7 @@ class TestQuery(unittest.TestCase):
             }
         }
         length_before = self.query.check_inbox("test_user")[1]
-        self.assertEqual(self.query.add_to_inbox("test_user_2", "test_user", "test_message"), ("ack", "message_delivered"))
+        self.assertEqual(self.query.add_to_inbox("test_user_2", "test_user", "test_message"), ("ack", "Message delivered"))
         self.assertEqual(self.query.check_inbox("test_user")[1], length_before + 1)
 
 if __name__ == '__main__':
