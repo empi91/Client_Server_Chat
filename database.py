@@ -82,6 +82,22 @@ class Database:
         except (psycopg2.DatabaseError, Exception) as e:
             print(e)
 
+    def drop_database(self, db_name):
+        try:
+            connection = psycopg2.connect(**self.config)
+            connection.autocommit = True
+            cursor = connection.cursor()
+
+            query = sql.SQL("DROP DATABASE {}").format(sql.Identifier(db_name))
+            cursor.execute(query)
+
+            cursor.close()
+            connection.close()
+        except psycopg2.errors.DuplicateDatabase as e:
+            pass
+        except (psycopg2.DatabaseError, Exception) as e:
+            print(e)
+
     def create_tables(self):
         try:
             with psycopg2.connect(**self.config) as connection:

@@ -2,208 +2,113 @@ import os
 import sys
 import unittest
 
+import user
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from unittest.mock import patch
 
 from query import Query
+from user import User
 
 class TestQuery(unittest.TestCase):
     #setUp()
     def setUp(self):
         self.query = Query()
+        self.user = User()
+        self.query.database.create_database("test_db")
+        self.query.database.load_config("test_db")
+        self.query.database.create_tables()
+        self.query.database.execute_query(self.query.database.QUERY_DICT["REGISTER_USER"], ("test_user_1", "test_password_1", "admin"))
+        self.query.database.execute_query(self.query.database.QUERY_DICT["REGISTER_USER"], ("test_user_2", "test_password_2", "user"))
+        self.query.database.execute_query(self.query.database.QUERY_DICT["ADD_MESSAGE_TO_INBOX"], ("test_msg_1", "test_user_2", "test_user_1"))
+        self.query.database.execute_query(self.query.database.QUERY_DICT["ADD_MESSAGE_TO_INBOX"], ("test_msg_2", "test_user_2", "test_user_1"))
+        self.query.database.execute_query(self.query.database.QUERY_DICT["ADD_MESSAGE_TO_INBOX"], ("test_msg_3", "test_user_2", "test_user_1"))
+        self.query.database.execute_query(self.query.database.QUERY_DICT["ADD_MESSAGE_TO_INBOX"], ("test_msg_4", "test_user_2", "test_user_1"))
+        self.query.database.execute_query(self.query.database.QUERY_DICT["ADD_MESSAGE_TO_INBOX"], ("test_msg_5", "test_user_2", "test_user_1"))
+
+    def tearDown(self):
+        self.query.database.load_config("postgresql")
+        self.query.database.drop_database("test_db")
+        pass
 
     # Test check_inbox() method
-    @patch("query.Database")
-    def test_checking_number_of_messages_in_user_inbox(self, mock_database):
+    def test_checking_number_of_messages_in_user_inbox(self):
         """
         Testing if check_inbox() methods returns correct number of messages in user's inbox
-        :param mock_database:
         :return:
         """
-        mock_database.return_value.database = {
-            "test_user": {
-                "username": "test_user",
-                    "inbox": [
-                      {
-                        "sender": "test_user_2",
-                        "message": "Hello"
-                      },
-                      {
-                        "sender": "test_user_3",
-                        "message": "Hi"
-                      }
-                    ]
-            }
-        }
-        self.assertEqual(self.query.check_inbox("test_user"), ("inbox", 2))
+        self.assertEqual(self.query.check_inbox("test_user_2"), ("inbox", 5))
 
     # Test read_inbox() method
-    @patch("database.Database")
-    def test_reading_message_from_inbox(self, mock_database):
+    def test_reading_message_from_inbox(self):
         """
         Test if reading message from inbox works as expected
-        :param mock_database:
         :return:
         """
-        mock_database.return_value.database = {
-            "test_user": {
-                "username": "test_user",
-                "inbox": [
-                    {
-                        "sender": "test_user_2",
-                        "message": "Hello"
-                    }
-                ]
-            }
-        }
-        self.assertEqual(self.query.read_inbox("test_user"), ("message", {"message": "Hello", "sender": "test_user_2"}))
-    @patch("query.Database")
-    def test_removing_read_message_from_inbox(self, mock_database):
+        self.assertEqual(self.query.read_inbox("test_user_2"), ("message", {"message": "test_msg_1", "sender": "test_user_1"}))
+    def test_removing_read_message_from_inbox(self):
         """
         Testing if unread message is removed from inbox after read
-        :param mock_database:
         :return:
         """
-        mock_database.return_value.database = {
-            "test_user": {
-                "username": "test_user",
-                "inbox": [
-                    {
-                        "sender": "test_user_2",
-                        "message": "Hello"
-                    }
-                ]
-            }
-        }
-        length_before = self.query.check_inbox("test_user")
-        self.query.read_inbox("test_user")
-        self.assertEqual(self.query.check_inbox("test_user")[1], length_before[1] - 1)
-    @patch("query.Database")
-    def test_reading_message_from_empty_inbox(self, mock_database):
+        length_before = self.query.check_inbox("test_user_2")
+        self.query.read_inbox("test_user_2")
+        self.assertEqual(self.query.check_inbox("test_user_2")[1], length_before[1] - 1)
+    def test_reading_message_from_empty_inbox(self):
         """
-        Testing if if inbox is empty a correct error message is returned to user
-        :param mock_database:
+        Testing if inbox is empty a correct error message is returned to user
         :return:
         """
-        mock_database.return_value.database = {
-            "test_user": {
-                "username": "test_user",
-                "inbox": []
-            }
-        }
-        self.assertEqual(self.query.read_inbox("test_user"), ("error", "Inbox is empty"))
+        self.assertEqual(self.query.read_inbox("test_user_1"), ("error", "Inbox is empty"))
 
     # Test send_message() method
-    @patch("user.Database")
-    @patch("query.Database")
-    def test_sending_message_to_existing_user(self, mock_query_database, mock_user_database):
+    @patch("user.User.check_if_registered", return_value=True)
+    def test_sending_message_to_existing_user(self, mock_user_check):
         """
         Testing sending message to an existing user with not-full inbox
-        :param mock_query_database:
-        :param mock_user_database:
         :return:
         """
-        mock_query_database.return_value.database = {
-            "test_user": {
-                "username": "test_user",
-                "inbox": [{}]
-            },
-            "test_user_2": {
-                "username": "test_user_2",
-                "inbox": []
-            }
-        }
-        mock_user_database.return_value.database = {
-            "test_user": {
-                "username": "test_user",
-                "inbox": [{}]
-            },
-            "test_user_2": {
-                "username": "test_user_2",
-                "inbox": []
-            }
-        }
         message = {
-            "sender": "test_user_2",
-            "receiver": "test_user",
-            "message": "Hello!"
+            "sender": 'test_user_2',
+            "receiver": 'test_user_1',
+            "message": "test_message"
         }
-        self.assertEqual(self.query.send_message(message), ("ack", "message_delivered"))
-    @patch("user.Database")
-    def test_sending_message_to_non_existing_user(self, mock_user_database):
+        self.assertEqual(self.query.send_message(message), ("ack", "Message delivered"))
+    def test_sending_message_to_non_existing_user(self):
         """
         Testing sending message to a non-existing user
-        :param mock_user_database:
         :return:
         """
-        mock_user_database.return_value.database = {
-            "test_user": {
-                "username": "test_user",
-                "inbox": [{}]
-            }
-        }
-        message = {
-            "sender": "test_user",
-            "receiver": "test_user_2",
-            "message": "Hello!"
-        }
-        self.assertEqual(self.query.send_message(message), ("error", "Receiver doesn't exist"))
-    @patch("user.Database")
-    @patch("query.Database")
-    def test_sending_message_to__existing_user_with_full_inbox(self, mock_query_database, mock_user_database):
-        """
-        Testing sending message to an existing user with full inbox
-        :param mock_user_database:
-        :param mock_query_database:
-        :return:
-        """
-        mock_user_database.return_value.database = {
-            "test_user": {
-                "username": "test_user",
-                "inbox": [{}]
-            },
-            "test_user_2": {
-                "username": "test_user_2",
-                "inbox": [{}]
-            }
-        }
-        mock_query_database.return_value.database = {
-            "test_user": {
-                "username": "test_user",
-                "inbox": [
-                    {"message": "Hello"},
-                    {"message": "Hello"},
-                    {"message": "Hello"},
-                    {"message": "Hello"},
-                    {"message": "Hello"},
-                ]
-            }
-        }
         message = {
             "sender": "test_user_2",
-            "receiver": "test_user",
+            "receiver": "test_user_3",
+            "message": "How are you?"
+        }
+        self.assertEqual(self.query.send_message(message), ("error", "Receiver doesn't exist"))
+    @patch("user.User.check_if_registered", return_value=True)
+    def test_sending_message_to__existing_user_with_full_inbox(self, mock_user_check):
+        """
+        Testing sending message to an existing user with full inbox
+        :param mock_user_check:
+        :return:
+        """
+        message = {
+            "sender": "test_user_1",
+            "receiver": "test_user_2",
             "message": "Hello!"
         }
         self.assertEqual(self.query.send_message(message), ("error", "Receiver inbox full"))
 
     # Test add_to_inbox() method
-    @patch("query.Database")
-    def test_adding_message_to_inbox(self, mock_query_database):
+    def test_adding_message_to_inbox(self):
         """
         Testing if adding a new message to inbox works
-        :param mock_query_database:
         :return:
         """
-        mock_query_database.return_value.database = {
-            "test_user": {
-                "username": "test_user",
-                "inbox": []
-            }
-        }
-        length_before = self.query.check_inbox("test_user")[1]
-        self.assertEqual(self.query.add_to_inbox("test_user_2", "test_user", "test_message"), ("ack", "Message delivered"))
-        self.assertEqual(self.query.check_inbox("test_user")[1], length_before + 1)
+        length_before = self.query.check_inbox("test_user_2")[1]
+        self.assertEqual(self.query.add_to_inbox("test_user_1", "test_user_2", "test_message"), ("ack", "Message delivered"))
+        self.assertEqual(self.query.check_inbox("test_user_2")[1], length_before + 1)
 
 if __name__ == '__main__':
     unittest.main()
