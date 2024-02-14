@@ -30,7 +30,6 @@ class TestQuery(unittest.TestCase):
     def tearDown(self):
         self.query.database.load_config("postgresql")
         self.query.database.drop_database("test_db")
-        pass
 
     # Test check_inbox() method
     def test_checking_number_of_messages_in_user_inbox(self):

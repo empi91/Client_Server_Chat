@@ -3,7 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/Python_202_Exam.iml" filepath="$PROJECT_DIR$/.idea/Python_202_Exam.iml" />
-      <module fileurl="file://$PROJECT_DIR$/../PythonTraining/postgres/.idea/postgres.iml" filepath="$PROJECT_DIR$/../PythonTraining/postgres/.idea/postgres.iml" />
     </modules>
   </component>
 </project>

@@ -9,7 +9,7 @@ class User:
         self.username = ""
         self.password = ""
         self.type = None
-        self.user_login = False
+        self.is_user_login = False
         self.database = Database()
         pass
 
@@ -37,7 +37,7 @@ class User:
 
     def login_user(self, socket):
         connection = Connection(socket)
-        while not self.user_login:
+        while not self.is_user_login:
             self.username = input("Enter username: ")
             self.password = input("Enter password: ")
 
@@ -49,7 +49,7 @@ class User:
             connection.send_data("login", credentials)
             query_header, query_message = connection.receive_data()
             if query_header == "ack":
-                self.user_login = True
+                self.is_user_login = True
                 print(query_message)
                 return True
             elif query_header == "add_account_type":
@@ -61,7 +61,7 @@ class User:
                     else:
                         print("Each user can be either admin or user, try again")
                 connection.send_data("account_type", credentials)
-                self.user_login = True
+                self.is_user_login = True
             else:
                 print(query_message)
         return 0
