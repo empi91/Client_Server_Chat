@@ -19,11 +19,11 @@ class Client:
         while True:
             text = input(f"{self.name}>: ")
             message = Message(text)
-            json_message = message.encode_message(text)
+            json_message = message.encode_message()
             s.send(json_message)
 
-            json_answer = s.recv(1024).decode("utf-8")
-            decoded_answer = message.decode_message(json_answer)
+            message.text = s.recv(1024).decode("utf-8")
+            decoded_answer = message.decode_message()
             if type(decoded_answer) == dict:
                 for key, value in decoded_answer.items():
                     print(f"{key}: {value}")

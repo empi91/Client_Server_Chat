@@ -27,12 +27,12 @@ class Server:
                 if not mess:
                     break
                 message = Message(mess)
-                command = message.decode_message(mess)
+                command = message.decode_message()
                 print(command)
 
                 try:
-                    answer = self.check_command(command)
-                    json_answer = message.encode_message(answer)
+                    message.text = self.check_command(command)
+                    json_answer = message.encode_message()
                     conn.send(json_answer)
 
                 except IOError as e:
@@ -67,7 +67,7 @@ class Server:
                 shutdown = True
                 return shutdown
             case _:
-                error_msg = "Wrong command, try again"
+                error_msg = ""
                 return error_msg
         
     def calc_uptime(self):
