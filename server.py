@@ -1,40 +1,77 @@
-# server.py
-
 import socket
 import time
-
-from connection import Connection
-from query import Query
+import errno
+from message import Message
 
 class Server:
+    start_time = 0
+    SERVER_VERSION = '1.0.1'
 
-    def __init__(self, host, port, server_version):
+    def __init__(self, host, port):
         self.host = host
         self.port = port
-        self.query = Query()
-        self.query.start_time = time.gmtime()
-        self.query.server_version = server_version
-
-        # Starting the server socket connection
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.bind((self.host, self.port))
-        self.socket.listen()
-        print("Server online")
 
     def start_server(self):
-        # Accepting connection from client
-        client_socket, addr = self.socket.accept()
-        connection = Connection(client_socket)
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind((self.host, self.port))
+        s.listen()
+        self.start_time = time.gmtime()
+        print("Server online")
+        
+        conn, addr = s.accept()
+        with conn:
+            print(f"Client connected: {addr}")
+            while True:
+                mess = conn.recv(1024).decode("utf-8")
+                if not mess:
+                    break
+                message = Message(mess)
+                command = message.decode_message()
+                print(command)
 
-        print(f"Client connected: {addr}")
+                try:
+                    message.text = self.check_command(command)
+                    json_answer = message.encode_message()
+                    conn.send(json_answer)
 
-        while True:
-            query_header, query_message = connection.receive_data()
-            ans_header, ans_message = self.query.process_query(query_header, query_message)
-            connection.send_data(ans_header, ans_message)
+                except IOError as e:
+                    if e.errno == errno.EPIPE:
+                        pass
+    
+    def check_command(self, com):
+        match com:
+            case "help":
+                comm_dict = {
+                    "help": "Displays list of all server commands",
+                    "uptime": "Returns server lifetime",
+                    "info": "Returns server version and start date",
+                    "stop": "Stops server and client simultaneously"
+                }
+                return comm_dict
 
+            case "uptime":
+                uptime_dict = {
+                    "Server uptime": self.calc_uptime(),
+                }
+                return uptime_dict
 
+            case "info":
+                info_dict = {
+                    "Server version": self.SERVER_VERSION,
+                    "Server start date": f"{self.start_time.tm_year}/{self.start_time.tm_mon}/{self.start_time[2]} {self.start_time.tm_hour}:{self.start_time.tm_min}:{self.start_time.tm_sec}"
+                }
+                return info_dict
 
+            case "stop":
+                shutdown = True
+                return shutdown
+            case _:
+                error_msg = ""
+                return error_msg
+        
+    def calc_uptime(self):
+        curr_time = time.gmtime()
+        uptime = f"{curr_time[0] - self.start_time[0]} Years {curr_time[1] - self.start_time[1]} Months {curr_time[2] - self.start_time[2]} Days {curr_time[3] - self.start_time[3]} Hours {curr_time[4] - self.start_time[4]} Minutes {curr_time[5] - self.start_time[5]} Seconds"
 
-
+        return uptime
