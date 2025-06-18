@@ -5,7 +5,7 @@ from message import Message
 
 class Server:
     start_time = 0
-    SERVER_VERSION = '1.0.1'
+    SERVER_VERSION = '1.1.0'
 
     def __init__(self, host, port):
         self.host = host
@@ -26,12 +26,13 @@ class Server:
                 mess = conn.recv(1024).decode("utf-8")
                 if not mess:
                     break
-                message = Message(mess)
-                command = message.decode_message()
-                print(command)
+                message = Message(0, mess)
+                header, text, author = message.decode_message(mess)
+                print(f"{author}: {text}")
+
 
                 try:
-                    message.text = self.check_command(command)
+                    message.header, message.text = self.check_command(header, text)
                     json_answer = message.encode_message()
                     conn.send(json_answer)
 
@@ -39,39 +40,42 @@ class Server:
                     if e.errno == errno.EPIPE:
                         pass
     
-    def check_command(self, com):
-        match com:
-            case "help":
-                comm_dict = {
-                    "help": "Displays list of all server commands",
-                    "uptime": "Returns server lifetime",
-                    "info": "Returns server version and start date",
-                    "stop": "Stops server and client simultaneously"
-                }
-                return comm_dict
+    def check_command(self, head, text):
+        if head == "Command":
+            match text:
+                case "help":
+                    comm_dict = {
+                        "help": "Displays list of all server commands",
+                        "uptime": "Returns server lifetime",
+                        "info": "Returns server version and start date",
+                        "stop": "Stops server and client simultaneously"
+                    }
+                    return "Command", comm_dict
 
-            case "uptime":
-                uptime_dict = {
-                    "Server uptime": self.calc_uptime(),
-                }
-                return uptime_dict
+                case "uptime":
+                    uptime_dict = {
+                        "Server uptime": self.calc_uptime(),
+                    }
+                    return "Command", uptime_dict
 
-            case "info":
-                info_dict = {
-                    "Server version": self.SERVER_VERSION,
-                    "Server start date": f"{self.start_time.tm_year}/{self.start_time.tm_mon}/{self.start_time[2]} {self.start_time.tm_hour}:{self.start_time.tm_min}:{self.start_time.tm_sec}"
-                }
-                return info_dict
+                case "info":
+                    info_dict = {
+                        "Server version": self.SERVER_VERSION,
+                        "Server start date": f"{self.start_time.tm_year}/{self.start_time.tm_mon}/{self.start_time[2]} {self.start_time.tm_hour}:{self.start_time.tm_min}:{self.start_time.tm_sec}"
+                    }
+                    return "Command", info_dict
 
-            case "stop":
-                shutdown = True
-                return shutdown
-            case _:
-                error_msg = ""
-                return error_msg
+        elif head == "Stop":
+            return "Stop", ""
+        else:
+            return "Message", text
         
     def calc_uptime(self):
-        curr_time = time.gmtime()
-        uptime = f"{curr_time[0] - self.start_time[0]} Years {curr_time[1] - self.start_time[1]} Months {curr_time[2] - self.start_time[2]} Days {curr_time[3] - self.start_time[3]} Hours {curr_time[4] - self.start_time[4]} Minutes {curr_time[5] - self.start_time[5]} Seconds"
+        # curr_time = time.gmtime()
+        # uptime = f"{curr_time[0] - self.start_time[0]} Years {curr_time[1] - self.start_time[1]} Months {curr_time[2] - self.start_time[2]} Days {curr_time[3] - self.start_time[3]} Hours {curr_time[4] - self.start_time[4]} Minutes {curr_time[5] - self.start_time[5]} Seconds"
+        start_timestamp = time.mktime(self.start_time)
+        current_timestamp = time.time()
+        uptime_sec = int(current_timestamp - start_timestamp)
 
-        return uptime
+
+        return uptime_sec

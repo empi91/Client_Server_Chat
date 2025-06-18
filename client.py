@@ -18,17 +18,17 @@ class Client:
         s.connect((self.host, self.port))
         while True:
             text = input(f"{self.name}>: ")
-            message = Message(text)
+            message = Message(1, text, self.name)
             json_message = message.encode_message()
             s.send(json_message)
 
-            message.text = s.recv(1024).decode("utf-8")
-            decoded_answer = message.decode_message()
-            if type(decoded_answer) == dict:
+            mess_received = s.recv(1024).decode("utf-8")
+            decoded_header, decoded_answer, author = message.decode_message(mess_received)
+
+            if decoded_header == "Command":
                 for key, value in decoded_answer.items():
                     print(f"{key}: {value}")
-            elif type(decoded_answer) == bool:
-                if decoded_answer:
+            elif decoded_header == "Stop":
                     s.close()
                     sys.exit()
 
