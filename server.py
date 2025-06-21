@@ -1,5 +1,5 @@
 import socket
-import time
+from datetime import datetime
 import errno
 from message import Message
 
@@ -10,39 +10,38 @@ class Server:
     def __init__(self, host, port):
         self.host = host
         self.port = port
+        self.start_time = datetime.now()
 
     def start_server(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind((self.host, self.port))
-        s.listen()
-        self.start_time = time.gmtime()
-        print("Server online")
-        
-        conn, addr = s.accept()
-        with conn:
-            print(f"Client connected: {addr}")
-            while True:
-                mess = conn.recv(1024).decode("utf-8")
-                if not mess:
-                    break
-                message = Message(0, mess)
-                header, text, author = message.decode_message(mess)
-                print(f"{author}: {text}")
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind((self.host, self.port))
+            s.listen()
+            print("Server online")
+            
+            conn, addr = s.accept()
+            with conn:
+                print(f"Client connected: {addr}")
+                while True:
+                    rec_mess = conn.recv(1024).decode("utf-8")
+                    if not rec_mess:
+                        break
+                    message = Message(rec_mess)
+                    header, text = message.decode_message(rec_mess)
+                    print(f"Received: {text}")
 
+                    try:
+                        message.header, message.text = self.check_command(header, text)
+                        json_answer = message.encode_message()
+                        conn.send(json_answer)
 
-                try:
-                    message.header, message.text = self.check_command(header, text)
-                    json_answer = message.encode_message()
-                    conn.send(json_answer)
-
-                except IOError as e:
-                    if e.errno == errno.EPIPE:
-                        pass
+                    except IOError as e:
+                        if e.errno == errno.EPIPE:
+                            pass
     
     def check_command(self, head, text):
         if head == "Command":
-            match text:
+            match text.lower():
                 case "help":
                     comm_dict = {
                         "help": "Displays list of all server commands",
@@ -53,29 +52,29 @@ class Server:
                     return "Command", comm_dict
 
                 case "uptime":
+                    days, hours, minutes, seconds = self.calc_uptime()
                     uptime_dict = {
-                        "Server uptime": self.calc_uptime(),
+                        "Server uptime": f"Server is active for {days} days. {hours} hours, {minutes} minutes and {seconds} seconds"
                     }
                     return "Command", uptime_dict
 
                 case "info":
                     info_dict = {
                         "Server version": self.SERVER_VERSION,
-                        "Server start date": f"{self.start_time.tm_year}/{self.start_time.tm_mon}/{self.start_time[2]} {self.start_time.tm_hour}:{self.start_time.tm_min}:{self.start_time.tm_sec}"
+                        "Server start date": f"{self.start_time}"
                     }
                     return "Command", info_dict
-
-        elif head == "Stop":
-            return "Stop", ""
+                case "stop":
+                    return "Command", "Stop"
         else:
             return "Message", text
         
-    def calc_uptime(self):
-        # curr_time = time.gmtime()
-        # uptime = f"{curr_time[0] - self.start_time[0]} Years {curr_time[1] - self.start_time[1]} Months {curr_time[2] - self.start_time[2]} Days {curr_time[3] - self.start_time[3]} Hours {curr_time[4] - self.start_time[4]} Minutes {curr_time[5] - self.start_time[5]} Seconds"
-        start_timestamp = time.mktime(self.start_time)
-        current_timestamp = time.time()
-        uptime_sec = int(current_timestamp - start_timestamp)
+    def calc_uptime(self) -> tuple[int, int, int, int]:
+        now_time = datetime.now()
+        uptime_delta = now_time - self.start_time
+        days = uptime_delta.days
+        hours = uptime_delta.seconds // 3600
+        minutes = (uptime_delta.seconds % 3600) // 60
+        seconds = uptime_delta.seconds
 
-
-        return uptime_sec
+        return days, hours, minutes, seconds
