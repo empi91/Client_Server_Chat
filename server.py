@@ -1,21 +1,23 @@
-import socket
-from datetime import datetime
+# server.py 
+
+# import socket
 import errno
 from message import Message
+from datetime import datetime
+from connection import Connection
 
 class Server:
     start_time = 0
     SERVER_VERSION = '1.1.0'
 
-    def __init__(self, host, port):
-        self.host = host
-        self.port = port
+    def __init__(self):
         self.start_time = datetime.now()
 
     def start_server(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        connection = Connection()
+        with connection.create_server_connection() as s:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            s.bind((self.host, self.port))
+            s.bind((connection.host, connection.port))
             s.listen(5)
             print("Server online")
             

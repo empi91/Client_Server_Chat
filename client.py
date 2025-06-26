@@ -1,31 +1,33 @@
-import socket
+# client.py
+
+# import socket
 import sys
 
 from message import Message
+from connection import Connection
 
-HOST = '127.0.0.1'
-PORT = 65432
 
 class Client:
     keywords = ['help', 'uptime', 'info', 'stop']
 
-    def __init__(self, host, port):
-        self.host = host
-        self.port = port
+    def __init__(self):
         self.name = ""
         self.login = False
 
-    def start_client(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((self.host, self.port))
-            print("Welcome on our server. Please sign in or create new account.")
 
-            while not self.login:
-                self.user_auth()
+    def start_client(self):
+        connection = Connection()
+
+        while not self.login:
+            self.user_auth()
+
+        with connection.create_server_connection() as s:
+            s.connect((connection.host, connection.port))
 
             while True:
                 print("Let's talk")
                 text = input(f"{self.name}>: ")
+
                 header = self.check_msg_header(text)
                 message = Message(text, header)
                 json_message = message.encode_message()
@@ -41,18 +43,12 @@ class Client:
                             print(f"{key}: {value}")
 
 
-
-    def check_msg_header(self, text) -> str:
-        if text.lower() in self.keywords: 
-            header = "Command"
-        else: 
-            header = "Message"
-
-        return header
-    
-
-
     def user_auth(self):
+        connection = Connection()
+        db = 
+
+        print("Welcome on our server. Please sign in or create new account.")
+
         self.name = input("Username: ")
         password = input("Password: ")
 
@@ -67,6 +63,14 @@ class Client:
             self.login = True
 
 
+    def check_if_registered(self, login, password):
+        # Connect to database
+        # Check if useer with this username exists
+        # If YES, continue
+        # If NOT, create new user with given username and password
+
+        return True
+
 
     def verify_login(self, login, password):
         # Connect to database
@@ -77,16 +81,17 @@ class Client:
 
 
 
-    def check_if_registered(self, login, password):
-        # Connect to database
-        # Check if useer with this username exists
-        # If YES, continue
-        # If NOT, create new user with given username and password
 
-        return True
+    def check_msg_header(self, text) -> str:
+        if text.lower() in self.keywords: 
+            header = "Command"
+        else: 
+            header = "Message"
+
+        return header
          
 
 
 if __name__ == "__main__":
-    client = Client(HOST, PORT)
+    client = Client()
     client.start_client()

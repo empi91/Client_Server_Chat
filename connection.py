@@ -1,13 +1,17 @@
+# connection.py
+
 import socket
 
 class Connection:
-    def __init(self, host = '127.0.0.1', port = 65432):
-        self.host = host
-        self.port = port
+    #TODO Add reading those parameters from config file
+    host = '127.0.0.1'
+    port = 65432
+
+    def __init(self, ):
         self.socket = None
+        print(f"Host: {self.host}, Port: {self.port}")
         
 
-    
     def create_client_connection(self):
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
