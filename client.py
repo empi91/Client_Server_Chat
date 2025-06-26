@@ -5,6 +5,7 @@ import sys
 
 from message import Message
 from connection import Connection
+from db import Database
 
 
 class Client:
@@ -45,31 +46,34 @@ class Client:
 
     def user_auth(self):
         connection = Connection()
-        db = 
 
         print("Welcome on our server. Please sign in or create new account.")
 
-        self.name = input("Username: ")
-        password = input("Password: ")
+        while True:
+            self.name = input("Username: ")
+            password = input("Password: ")
 
-        if self.check_if_registered(self.name, password):
-            if self.verify_login(self.name, password):
-                print("Sign in successfull, welcome back!")
-                self.login = True
+            if self.check_if_registered(self.name):
+                if self.verify_login(self.name, password):
+                    print("Sign in successfull, welcome back!")
+                    self.login = True
+                    return
+                else:
+                    print("Wrong password, try again!")
             else:
-                print("Wrong password, try again!")
-        else:
-            print("New user registered.")
-            self.login = True
+                print("New user registered.")
+                self.login = True
+                return
 
 
-    def check_if_registered(self, login, password):
+    def check_if_registered(self, login):
         # Connect to database
         # Check if useer with this username exists
         # If YES, continue
         # If NOT, create new user with given username and password
 
-        return True
+        db = Database()
+        return db.check_in_db(login)
 
 
     def verify_login(self, login, password):
@@ -77,7 +81,8 @@ class Client:
         # Check is user with given username has given password assigned to his account
         # Return accordingly
 
-        return True
+        db = Database()
+        return db.check_login(login, password)
 
 
 
