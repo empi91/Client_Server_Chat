@@ -1,10 +1,11 @@
 # server.py 
 
-# import socket
+import socket
 import errno
 from message import Message
 from datetime import datetime
 from connection import Connection
+from db import Database
 
 class Server:
     start_time = 0
@@ -30,10 +31,10 @@ class Server:
                         break
                     message = Message(rec_mess)
                     header, text = message.decode_message(rec_mess)
-                    print(f"Received: {text}")
+                    print(f"Received: {header}: {text}")
 
                     try:
-                        message.header, message.text = self.check_command(header, text)
+                        message.header, message.text = self.process_message(header, text)
                         json_answer = message.encode_message()
                         conn.send(json_answer)
 
@@ -41,7 +42,8 @@ class Server:
                         if e.errno == errno.EPIPE:
                             pass
     
-    def check_command(self, head, text):
+
+    def process_message(self, head, text):
         if head == "Command":
             match text.lower():
                 case "help":
@@ -68,9 +70,51 @@ class Server:
                     return "Command", info_dict
                 case "stop":
                     return "Command", "Stop"
+
+        elif head == "Authentication":
+            auth_dict = self.authenticate_user(text)
+            return "Authentication_answer", auth_dict
+
         else:
             return "Message", text
+
+ 
+    def authenticate_user(self, text):
+        if self.check_if_registered(text["login"], text["password"]):
+            if self.check_if_auth_correct(text["login"], text["password"]):
+                answer = {
+                "is_registered": True,
+                "login_successfull": True,
+                }
+            else:
+                answer = {
+                "is_registered": True,
+                "login_successfull": False,
+                }
+        else:
+            answer = {
+                "is_registered": False,
+                "login_successfull": True,
+            }
+
+        return answer
+
+    
+    def check_if_registered(self, login, password):
+        db = Database()
+        if db.check_in_db(login, password):
+            return True
+        else:
+            db.add_to_db(login, password)
+            return False
+
+
+    def check_if_auth_correct(self, login, password):
+        db = Database()
+        return db.check_login(login, password)
+
         
+
     def calc_uptime(self) -> tuple[int, int, int, int]:
         now_time = datetime.now()
         uptime_delta = now_time - self.start_time
