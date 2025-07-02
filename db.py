@@ -4,30 +4,39 @@ import json
 import os 
 
 class Database:
+    DB_FILE = "db.json"
 
     def __init__(self):
         if not os.path.exists("db.json"):
             print("DB not exsiting, creating new")
             empty_data = {"users": []}
-            with open("db.json", "w") as db:
+            with open(self.DB_FILE, "w") as db:
                 json.dump(empty_data, db, indent=4)
-        else:
-            print("DB already exists")
+
+
+    def open_db(self):
+        with open(self.DB_FILE, "r") as db:
+            opened_db = json.load(db)
+        return opened_db
+
+
+    def dump_db(self, existing_db):
+        with open(self.DB_FILE, "w") as db:
+            json.dump(existing_db, db, indent=4)
+        
 
 
     def check_in_db(self, username, password):
-        with open("db.json", "r") as db:
-            existing_db = json.load(db)
+        existing_db = self.open_db()
 
         for user in existing_db["users"]:
             if user["Username"] == username:
                 return True
         return False
-
-
+ 
+ 
     def check_login(self, username, password):
-        with open("db.json", "r") as db:
-            existing_db = json.load(db)   
+        existing_db = self.open_db()
 
         for user in existing_db["users"]:
             if user["Username"] == username:
@@ -45,13 +54,9 @@ class Database:
             "Inbox": [],
         }
 
-        with open("db.json", "r") as db:
-            existing_db = json.load(db)
-        
+        existing_db = self.open_db()
         existing_db["users"].append(new_user)
-
-        with open("db.json", "w") as db:
-            json.dump(existing_db, db, indent=4)
+        self.dump_db(existing_db)
 
         return True
 
@@ -63,7 +68,18 @@ class Database:
         pass
 
 
-    def modify_db(self):
+    def modify_db(self, username, field, value):
+        try:
+            existing_db = self.open_db()
 
+            for user in existing_db["users"]:
+                if user["Username"] == username:
+                    user[field] = value
 
-        pass
+            self.dump_db(existing_db)
+            return True
+        except KeyError:
+            print(f"KeyError: {field} not found in user data.")
+            return False
+
+        

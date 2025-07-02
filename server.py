@@ -74,6 +74,12 @@ class Server:
         elif head == "Authentication":
             auth_dict = self.authenticate_user(text)
             return "Authentication_answer", auth_dict
+        elif head == "Acc_type":
+            update_status = self.add_account_type(text)
+            acc_update_dict = {
+                "update_status": update_status,
+            }
+            return "Account_type_update", acc_update_dict
 
         else:
             return "Message", text
@@ -112,6 +118,11 @@ class Server:
     def check_if_auth_correct(self, login, password):
         db = Database()
         return db.check_login(login, password)
+
+
+    def add_account_type(self, text):
+        db = Database()
+        return db.modify_db(text["login"], "Account type", text["acc_type"])
 
         
 
