@@ -6,5 +6,10 @@ from server import Server
 
 PATH = pathlib.Path.cwd() / "data.json"
 
-server = Server()
-server.start_server()
+def main():
+    server = Server()
+    server.start_server()
+
+
+if __name__ == "__main__":
+    main()

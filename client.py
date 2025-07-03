@@ -14,7 +14,8 @@ class Client:
     def start_client(self):
         connection = Connection()
 
-        with connection.create_server_connection() as s:
+        # with connection.create_server_connection() as s:
+        with connection.create_client_connection() as s:
             s.connect((connection.host, connection.port))
             
             while not self.login:
