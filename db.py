@@ -12,20 +12,9 @@ class Database:
             empty_data = {"users": []}
             with open(self.DB_FILE, "w") as db:
                 json.dump(empty_data, db, indent=4)
+       
 
-
-    def open_db(self):
-        with open(self.DB_FILE, "r") as db:
-            opened_db = json.load(db)
-        return opened_db
-
-
-    def dump_db(self, existing_db):
-        with open(self.DB_FILE, "w") as db:
-            json.dump(existing_db, db, indent=4)
-        
-
-    def check_in_db(self, username, password):
+    def check_user_in_db(self, username):
         existing_db = self.open_db()
 
         for user in existing_db["users"]:
@@ -45,7 +34,7 @@ class Database:
                     return False
        
     
-    def add_to_db(self, login, password, type=None):
+    def add_user_to_db(self, login, password, type=None):
         new_user = {
             "Username": login,
             "Password": password,
@@ -60,7 +49,7 @@ class Database:
         return True
 
 
-    def remove_from_db(self):
+    def remove_user_from_db(self):
 
 
         pass
@@ -80,4 +69,33 @@ class Database:
             print(f"KeyError: {field} not found in user data.")
             return False
 
+
+    def add_msg_to_db(self, username, sender, message):
+        try:
+            existing_db = self.open_db()
+
+            message = {
+                "Sender": sender,
+                "Message": message,
+            }
+
+            for user in existing_db["users"]:
+                if user["Username"] == username:
+                    user["Inbox"].append(message)
+
+            self.dump_db(existing_db)
+            return True
+        except KeyError:
+            print(f"KeyError: {field} not found in user data.")
+            return False
+
         
+    def open_db(self):
+        with open(self.DB_FILE, "r") as db:
+            opened_db = json.load(db)
+        return opened_db
+
+
+    def dump_db(self, existing_db):
+        with open(self.DB_FILE, "w") as db:
+            json.dump(existing_db, db, indent=4)

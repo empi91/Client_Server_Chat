@@ -26,10 +26,10 @@ class Message:
             text_message = json.loads(json_text)
             self.header = text_message["Header"]
             self.text = text_message["Message"]
-            # self.sender = text_message["Sender"]
-            # self.receiver = text_message["Receiver"]
+            self.sender = text_message["Sender"]
+            self.receiver = text_message["Receiver"]
 
-            return self.header, self.text
-            # return self.header, self.text, self.sender, self.receiver
+            # return self.header, self.text
+            return self.header, self.text, self.sender, self.receiver
         except json.JSONDecodeError:
             return "[Invalid JSON]: " + self.text

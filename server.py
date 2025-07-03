@@ -30,11 +30,10 @@ class Server:
                     if not rec_mess:
                         break
                     message = Message(rec_mess)
-                    header, text = message.decode_message(rec_mess)
-                    print(f"Received: {header}: {text}")
+                    header, text, sender, receiver = message.decode_message(rec_mess)
 
                     try:
-                        message.header, message.text = self.process_message(header, text)
+                        message.header, message.text, message.sender, message.receiver = self.process_message(header, text, sender, receiver, connection)
                         json_answer = message.encode_message()
                         conn.send(json_answer)
 
@@ -43,7 +42,7 @@ class Server:
                             pass
     
 
-    def process_message(self, head, text):
+    def process_message(self, head, text, sender, receiver, connection):
         if head == "Command":
             match text.lower():
                 case "help":
@@ -53,40 +52,47 @@ class Server:
                         "info": "Returns server version and start date",
                         "stop": "Stops server and client simultaneously"
                     }
-                    return "Command", comm_dict
+                    return "Command", comm_dict, connection.host, sender
 
                 case "uptime":
                     days, hours, minutes, seconds = self.calc_uptime()
                     uptime_dict = {
                         "Server uptime": f"Server is active for {days} days. {hours} hours, {minutes} minutes and {seconds} seconds"
                     }
-                    return "Command", uptime_dict
+                    return "Command", uptime_dict, connection.host, sender
 
                 case "info":
                     info_dict = {
                         "Server version": self.SERVER_VERSION,
                         "Server start date": f"{self.start_time}"
                     }
-                    return "Command", info_dict
+                    return "Command", info_dict, connection.host, sender
                 case "stop":
-                    return "Command", "Stop"
+                    return "Stop", "Stop", connection.host, sender
 
         elif head == "Authentication":
             auth_dict = self.authenticate_user(text)
-            return "Authentication_answer", auth_dict
+            return "Authentication_answer", auth_dict, connection.host, sender
         elif head == "Acc_type":
             update_status = self.add_account_type(text)
             acc_update_dict = {
                 "update_status": update_status,
             }
-            return "Account_type_update", acc_update_dict
+            return "Account_type_update", acc_update_dict, connection.host, sender
 
+        elif head == "Message":
+            if self.check_if_registered(receiver):
+                status = self.add_msg_to_db(receiver, sender, text)
+                return "Status", status, connection.host, sender
+            else:
+                status = "Receiver not existing in database"
+                return "Error", status, connection.host, sender
         else:
-            return "Message", text
+            return "Error", "Invalid message header", connection.host, sender
 
  
     def authenticate_user(self, text):
-        if self.check_if_registered(text["login"], text["password"]):
+        if self.check_if_registered(text["login"]):
             if self.check_if_auth_correct(text["login"], text["password"]):
                 answer = {
                 "is_registered": True,
@@ -98,6 +104,7 @@ class Server:
                 "login_successfull": False,
                 }
         else:
+            self.register_new_user(text["login"], text["password"])
             answer = {
                 "is_registered": False,
                 "login_successfull": True,
@@ -106,13 +113,16 @@ class Server:
         return answer
 
     
-    def check_if_registered(self, login, password):
+    def check_if_registered(self, login):
         db = Database()
-        if db.check_in_db(login, password):
+        if db.check_user_in_db(login):
             return True
-        else:
-            db.add_to_db(login, password)
-            return False
+        return False
+
+
+    def register_new_user(self, login, password):
+        db = Database()
+        db.add_user_to_db(login, password)
 
 
     def check_if_auth_correct(self, login, password):
@@ -123,6 +133,11 @@ class Server:
     def add_account_type(self, text):
         db = Database()
         return db.modify_db(text["login"], "Account type", text["acc_type"])
+
+    
+    def add_msg_to_db(self, receiver, sender, message):
+        db = Database()
+        return db.add_msg_to_db(receiver, sender, message)
 
 
     def calc_uptime(self) -> tuple[int, int, int, int]:

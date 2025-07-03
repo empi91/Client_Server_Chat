@@ -27,57 +27,68 @@ class Client:
             while True:
                 command = input(f"{self.name}>: ")
 
-                header, text = self.check_command(command)
+                header, text, sender, receiver = self.check_input_command(command, connection)
                 if not header:
                     continue
 
-                message = Message(text, header)
+                message = Message(text, header, sender, receiver)
                 json_message = message.encode_message()
                 s.send(json_message)
 
                 mess_received = s.recv(1024).decode("utf-8")
-                decoded_header, decoded_answer = message.decode_message(mess_received)
-                if decoded_header == "Command":
-                    if decoded_answer == "Stop":
-                        sys.exit()
-                    else:
-                        for key, value in decoded_answer.items():
-                            print(f"{key}: {value}")
+                decoded_header, decoded_answer, decoded_sender, decoded_receiver = message.decode_message(mess_received)
+
+                self.check_return_msg(decoded_header, decoded_answer, decoded_sender, decoded_receiver)
 
 
-    def check_command(self, command):
+    def check_input_command(self, command, connection):
         match command:
             case "!message":
                 header = "Message"
-                
+                sender = self.name
+                receiver = input(f"{self.name}>: Please add receiver username: ")
+                text = input(f"{self.name}>: Please type your message: ")
 
-                return header
-            case "!info":
-                header = "Command" 
-            
-                return header, "info"
+                return header, text, sender, receiver
+            case "!info":          
+                return "Command", "info", self.name, connection.host
             case "!uptime":
-                header = "Command"
-                
-                return header, "uptime"
+                return "Command", "uptime", self.name, connection.host
             case "!help":
-                header = "Command"
-                
-                return header, "help"
+                return "Command", "help", self.name, connection.host
             case "!stop":
-                header = "Command"
-                
-                return header, "stop"
+                return "Command", "stop", self.name, connection.host
+            case "!inbox":
+                return None, None, None, None
             case _:
                 print("Wrong command, try again")
-                return None, None
-
-    def create_msg(self):
+                return None, None, None, None
 
 
+    def check_return_msg(self, header, message, sender, receiver):
+        match header:
+            case "Command":
+                for key, value in message.items():
+                    print(f"{key}: {value}")
+                
+            case "Status":
+                if message:
+                    print("Operation finished successfully")
+                else:
+                    print("Operation failed")
+                
+            case "Stop":
+                sys.exit()
 
-        pass
+            case "Inbox_message":
+                print(f"Receiver message from {sender}: {message}")
 
+            case "Error":
+                print(f"[ERROR] {message}")
+
+            case _:
+                print("Empty server answer")
+                
  
     def user_auth(self, connection):
         print("Welcome on our server. Please sign in or create new account.")
@@ -96,7 +107,7 @@ class Client:
             connection.send(json_message)
 
             auth_answer = connection.recv(1024).decode("utf-8")
-            decoded_header, decoded_answer = message.decode_message(auth_answer)
+            decoded_header, decoded_answer, decoded_sender, decoder_receiver = message.decode_message(auth_answer)
 
             if decoded_answer["is_registered"]:
                 if decoded_answer["login_successfull"]:
@@ -119,7 +130,7 @@ class Client:
                 connection.send(json_message)
 
                 acc_type_answer = connection.recv(1024).decode("utf-8")
-                decoded_header, decoded_answer = message.decode_message(acc_type_answer)
+                decoded_header, decoded_answer, decoded_sender, decoded_receiver = message.decode_message(acc_type_answer)
 
                 if decoded_answer["update_status"]:
                     print("Account type updated successfully")
