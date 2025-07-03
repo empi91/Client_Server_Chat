@@ -1,6 +1,5 @@
 # client.py
 
-# import socket
 import sys
 
 from message import Message
@@ -9,8 +8,6 @@ from db import Database
 
 
 class Client:
-    keywords = ['help', 'uptime', 'info', 'stop']
-
     def __init__(self):
         self.name = ""
         self.login = False
@@ -19,20 +16,21 @@ class Client:
     def start_client(self):
         connection = Connection()
 
-
-
         with connection.create_server_connection() as s:
             s.connect((connection.host, connection.port))
             
             while not self.login:
                 self.user_auth(s)
 
-            print("Let's talk")
+            print("Choose what you want to do: \nSend a message: Type !message \nAccess server information: Type !info \nCheck uptime: Type !uptime \nStop server: Type !stop \nNeed help? Type !help")
 
             while True:
-                text = input(f"{self.name}>: ")
+                command = input(f"{self.name}>: ")
 
-                header = self.check_msg_header(text)
+                header, text = self.check_command(command)
+                if not header:
+                    continue
+
                 message = Message(text, header)
                 json_message = message.encode_message()
                 s.send(json_message)
@@ -45,7 +43,41 @@ class Client:
                     else:
                         for key, value in decoded_answer.items():
                             print(f"{key}: {value}")
- 
+
+
+    def check_command(self, command):
+        match command:
+            case "!message":
+                header = "Message"
+                
+
+                return header
+            case "!info":
+                header = "Command" 
+            
+                return header, "info"
+            case "!uptime":
+                header = "Command"
+                
+                return header, "uptime"
+            case "!help":
+                header = "Command"
+                
+                return header, "help"
+            case "!stop":
+                header = "Command"
+                
+                return header, "stop"
+            case _:
+                print("Wrong command, try again")
+                return None, None
+
+    def create_msg(self):
+
+
+
+        pass
+
  
     def user_auth(self, connection):
         print("Welcome on our server. Please sign in or create new account.")
@@ -74,7 +106,7 @@ class Client:
                 else:
                     print("Wrong password, try again!")
             else:
-                acc_type = input("New user registered, please add account type: normal/admin: ")
+                acc_type = input("New user registered, please add account type: admin/user: ")
 
                 text = {
                 "login": self.name,
@@ -96,15 +128,6 @@ class Client:
 
                 self.login = True
                 return
-
-
-    def check_msg_header(self, text) -> str:
-        if text.lower() in self.keywords: 
-            header = "Command"
-        else: 
-            header = "Message"
-
-        return header
 
 
 

@@ -25,7 +25,6 @@ class Database:
             json.dump(existing_db, db, indent=4)
         
 
-
     def check_in_db(self, username, password):
         existing_db = self.open_db()
 
@@ -59,7 +58,6 @@ class Database:
         self.dump_db(existing_db)
 
         return True
-
 
 
     def remove_from_db(self):

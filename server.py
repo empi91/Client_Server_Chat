@@ -124,7 +124,6 @@ class Server:
         db = Database()
         return db.modify_db(text["login"], "Account type", text["acc_type"])
 
-        
 
     def calc_uptime(self) -> tuple[int, int, int, int]:
         now_time = datetime.now()
