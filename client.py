@@ -1,10 +1,8 @@
 # client.py
 
 import sys
-
 from message import Message
 from connection import Connection
-from db import Database
 
 
 class Client:
@@ -22,7 +20,7 @@ class Client:
             while not self.login:
                 self.user_auth(s)
 
-            print("Choose what you want to do: \nSend a message: Type !message \nAccess server information: Type !info \nCheck uptime: Type !uptime \nStop server: Type !stop \nNeed help? Type !help")
+            print("Choose what you want to do: \nSend a message: Type !message \nCheck your inbox: Type !inbox\nAccess server information: Type !info \nCheck uptime: Type !uptime \nStop server: Type !stop \nNeed help? Type !help")
 
             while True:
                 command = input(f"{self.name}>: ")
@@ -59,7 +57,7 @@ class Client:
             case "!stop":
                 return "Command", "stop", self.name, connection.host
             case "!inbox":
-                return None, None, None, None
+                return "Command", "inbox", self.name, connection.host
             case _:
                 print("Wrong command, try again")
                 return None, None, None, None
@@ -81,7 +79,7 @@ class Client:
                 sys.exit()
 
             case "Inbox_message":
-                print(f"Receiver message from {sender}: {message}")
+                print(f"Receiver message from {message['Sender']}: \n{message['Message']}")
 
             case "Error":
                 print(f"[ERROR] {message}")

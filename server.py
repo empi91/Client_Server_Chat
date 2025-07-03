@@ -9,7 +9,7 @@ from db import Database
 
 class Server:
     start_time = 0
-    SERVER_VERSION = '1.1.0'
+    SERVER_VERSION = '1.2.0'
 
     def __init__(self):
         self.start_time = datetime.now()
@@ -17,7 +17,7 @@ class Server:
     def start_server(self):
         connection = Connection()
         with connection.create_server_connection() as s:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            # s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind((connection.host, connection.port))
             s.listen(5)
             print("Server online")
@@ -67,6 +67,17 @@ class Server:
                         "Server start date": f"{self.start_time}"
                     }
                     return "Command", info_dict, connection.host, sender
+                case "inbox":
+                    message_sender, message = self.get_msg_from_inbox(sender)
+
+                    if message == "EMPTY":
+                        return "Error", "Inbox empty", connection.host, sender
+                    else:
+                        inbox = {
+                            "Sender": message_sender,
+                            "Message": message, 
+                        }
+                        return "Inbox_message", inbox, connection.host, sender
                 case "stop":
                     return "Stop", "Stop", connection.host, sender
 
@@ -82,8 +93,12 @@ class Server:
 
         elif head == "Message":
             if self.check_if_registered(receiver):
-                status = self.add_msg_to_db(receiver, sender, text)
-                return "Status", status, connection.host, sender
+                if self.check_recv_inbox(receiver):
+                    status = self.add_msg_to_db(receiver, sender, text)
+                    return "Status", status, connection.host, sender
+                else:
+                    status = "Receiver inbox is full"
+                    return "Error", status, connection.host, sender
             else:
                 status = "Receiver not existing in database"
                 return "Error", status, connection.host, sender
@@ -138,6 +153,19 @@ class Server:
     def add_msg_to_db(self, receiver, sender, message):
         db = Database()
         return db.add_msg_to_db(receiver, sender, message)
+
+
+    def check_recv_inbox(self, login):
+        db = Database()
+        inbox_size = db.check_user_inbox(login)
+        if inbox_size < 5:
+            return True
+        return False
+
+
+    def get_msg_from_inbox(self, login):
+        db = Database()
+        return db.read_msg_from_inbox(login)
 
 
     def calc_uptime(self) -> tuple[int, int, int, int]:

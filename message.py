@@ -29,7 +29,6 @@ class Message:
             self.sender = text_message["Sender"]
             self.receiver = text_message["Receiver"]
 
-            # return self.header, self.text
             return self.header, self.text, self.sender, self.receiver
         except json.JSONDecodeError:
-            return "[Invalid JSON]: " + self.text
+            return "Error", "[Invalid JSON]: " + self.text, None, None

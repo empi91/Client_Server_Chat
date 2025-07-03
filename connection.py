@@ -7,7 +7,7 @@ class Connection:
     host = '127.0.0.1'
     port = 65432
 
-    def __init(self, ):
+    def __init__(self):
         self.socket = None
         print(f"Host: {self.host}, Port: {self.port}")
         

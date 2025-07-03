@@ -86,10 +86,32 @@ class Database:
             self.dump_db(existing_db)
             return True
         except KeyError:
-            print(f"KeyError: {field} not found in user data.")
+            print(f"KeyError: {username} not found in user data.")
             return False
 
+
+    def read_msg_from_inbox(self, username):
+        existing_db = self.open_db()
+
+        for user in existing_db["users"]:
+            if self.check_user_inbox(username) > 0:
+                if user["Username"] == username:
+                    message = user["Inbox"][0]
+                    user["Inbox"].pop(0)
+                    self.dump_db(existing_db)
+                    return message["Sender"], message["Message"]
+            else:
+                return username, "EMPTY"
+
+
+    def check_user_inbox(self, username):
+        existing_db = self.open_db()
+
+        for user in existing_db["users"]:
+            if user["Username"] == username:
+                return len(user["Inbox"])
         
+
     def open_db(self):
         with open(self.DB_FILE, "r") as db:
             opened_db = json.load(db)
