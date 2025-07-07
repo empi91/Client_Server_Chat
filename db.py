@@ -23,15 +23,12 @@ class Database:
         return False
  
  
-    def check_login(self, username, password):
+    def get_user_password(self, username):
         existing_db = self.open_db()
 
         for user in existing_db["users"]:
             if user["Username"] == username:
-                if user["Password"] == password:
-                    return True
-                else:
-                    return False
+                return user["Password"]
        
     
     def add_user_to_db(self, login, password, type=None):

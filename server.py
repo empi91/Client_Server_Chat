@@ -2,6 +2,8 @@
 
 import socket
 import errno
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
 from message import Message
 from datetime import datetime
 from connection import Connection
@@ -17,7 +19,6 @@ class Server:
     def start_server(self):
         connection = Connection()
         with connection.create_server_connection() as s:
-            # s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind((connection.host, connection.port))
             s.listen(5)
             print("Server online")
@@ -107,8 +108,12 @@ class Server:
 
  
     def authenticate_user(self, text):
+
+
         if self.check_if_registered(text["login"]):
-            if self.check_if_auth_correct(text["login"], text["password"]):
+            stored_password = self.get_stored_password(text["login"])
+            if self.verify_password(text["password"], stored_password):
+            # if self.check_if_auth_correct(text["login"], hashed_password):
                 answer = {
                 "is_registered": True,
                 "login_successfull": True,
@@ -119,13 +124,28 @@ class Server:
                 "login_successfull": False,
                 }
         else:
-            self.register_new_user(text["login"], text["password"])
+            hashed_password = self.hash_password(text["password"])
+            self.register_new_user(text["login"], hashed_password)
             answer = {
                 "is_registered": False,
                 "login_successfull": True,
             }
 
         return answer
+    
+
+    def verify_password(self, input_pass, stored_pass):
+        ph = PasswordHasher()
+        try:
+            ph.verify(stored_pass, input_pass)
+            return True
+        except VerifyMismatchError:
+            return False
+    
+    
+    def hash_password(self, password):
+        ph = PasswordHasher()
+        return ph.hash(password)
 
     
     def check_if_registered(self, login):
@@ -140,9 +160,9 @@ class Server:
         db.add_user_to_db(login, password)
 
 
-    def check_if_auth_correct(self, login, password):
+    def get_stored_password(self, login):
         db = Database()
-        return db.check_login(login, password)
+        return db.get_user_password(login)
 
 
     def add_account_type(self, text):
