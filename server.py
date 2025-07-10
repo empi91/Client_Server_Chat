@@ -2,8 +2,8 @@
 
 import socket
 import errno
-from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError
+#from argon2 import PasswordHasher
+#from argon2.exceptions import VerifyMismatchError
 from message import Message
 from datetime import datetime
 from connection import Connection
@@ -135,18 +135,21 @@ class Server:
     
 
     def verify_password(self, input_pass, stored_pass):
-        ph = PasswordHasher()
-        try:
-            ph.verify(stored_pass, input_pass)
+        #ph = PasswordHasher()
+        #try:
+        #    ph.verify(stored_pass, input_pass)
+        #    return True
+        #except VerifyMismatchError:
+        #    return False
+        if stored_pass == input_pass:
             return True
-        except VerifyMismatchError:
-            return False
+        return False
     
     
     def hash_password(self, password):
-        ph = PasswordHasher()
-        return ph.hash(password)
-
+        #ph = PasswordHasher()        ## removing argon2 for iPad
+        #return ph.hash(password)     ## removing argon2 for iPad
+        return password
     
     def check_if_registered(self, login):
         db = Database()

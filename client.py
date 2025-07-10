@@ -1,7 +1,7 @@
 # client.py
 
 import sys
-import maskpass
+#import maskpass
 from message import Message
 from connection import Connection
 
@@ -94,7 +94,8 @@ class Client:
 
         while True:
             self.name = input("Username: ")
-            password = maskpass.askpass("Password: ")
+            #password = maskpass.askpass("Password: ") 
+            password = input("Passowrd: ")
 
             text = {
                 "login": self.name,
