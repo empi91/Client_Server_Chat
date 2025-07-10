@@ -95,7 +95,7 @@ class Client:
         while True:
             self.name = input("Username: ")
             #password = maskpass.askpass("Password: ") 
-            password = input("Passowrd: ")
+            password = input("Password: ")
 
             text = {
                 "login": self.name,

@@ -70,7 +70,6 @@ class Server:
                     }
                     return "Command", info_dict, connection.host, sender
                 case "inbox":
-                    #message_sender, message = self.get_msg_from_inbox(sender)
                     message_sender, message = self.db_helper.get_msg_from_inbox(sender)
 
                     if message == "EMPTY":
@@ -85,7 +84,8 @@ class Server:
                     return "Stop", "Stop", connection.host, sender
 
         elif head == "Authentication":
-            auth_dict = self.authenticate_user(text)
+            authenticator = Authenticator(text)
+            auth_dict = authenticator.verify_login()
             return "Authentication_answer", auth_dict, connection.host, sender
         elif head == "Acc_type":
             update_status = self.db_helper.add_account_type(text)
@@ -107,15 +107,30 @@ class Server:
                 return "Error", status, connection.host, sender
         else:
             return "Error", "Invalid message header", connection.host, sender
+   
 
- 
-    def authenticate_user(self, text):
+    def calc_uptime(self) -> tuple[int, int, int, int]:
+        now_time = datetime.now()
+        uptime_delta = now_time - self.start_time
+        days = uptime_delta.days
+        hours = uptime_delta.seconds // 3600
+        minutes = (uptime_delta.seconds % 3600) // 60
+        seconds = uptime_delta.seconds
 
+        return days, hours, minutes, seconds
+        
+        
 
-        if self.db_helper.check_if_registered(text["login"]):
-            stored_password = self.db_helper.get_stored_password(text["login"])
-            if self.verify_password(text["password"], stored_password):
-            # if self.check_if_auth_correct(text["login"], hashed_password):
+class Authenticator():
+    def __init__(self, message):
+        self.text = message
+        self.db_helper = Db_helper()
+        
+    
+    def verify_login(self):
+        if self.db_helper.check_if_registered(self.text["login"]):
+            stored_password = self.db_helper.get_stored_password(self.text["login"])
+            if self.verify_password(self.text["password"], stored_password):
                 answer = {
                 "is_registered": True,
                 "login_successfull": True,
@@ -126,8 +141,8 @@ class Server:
                 "login_successfull": False,
                 }
         else:
-            hashed_password = self.hash_password(text["password"])
-            self.db_helper.register_new_user(text["login"], hashed_password)
+            hashed_password = self.hash_password(self.text["password"])
+            self.db_helper.register_new_user(self.text["login"], hashed_password)
             answer = {
                 "is_registered": False,
                 "login_successfull": True,
@@ -135,7 +150,7 @@ class Server:
 
         return answer
     
-
+        
     def verify_password(self, input_pass, stored_pass):
         #ph = PasswordHasher()
         #try:
@@ -152,16 +167,8 @@ class Server:
         #ph = PasswordHasher()        ## removing argon2 for iPad
         #return ph.hash(password)     ## removing argon2 for iPad
         return password
-    
-
-    def calc_uptime(self) -> tuple[int, int, int, int]:
-        now_time = datetime.now()
-        uptime_delta = now_time - self.start_time
-        days = uptime_delta.days
-        hours = uptime_delta.seconds // 3600
-        minutes = (uptime_delta.seconds % 3600) // 60
-        seconds = uptime_delta.seconds
-
-        return days, hours, minutes, seconds
+        
+        
+        
         
     

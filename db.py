@@ -121,7 +121,7 @@ class Database:
             
             
             
-class Db_helper:
+class DbHelper:
     def __init__(self):
         self.db = Database()
         
