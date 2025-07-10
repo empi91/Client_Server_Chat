@@ -7,7 +7,7 @@ import errno
 from message import Message
 from datetime import datetime
 from connection import Connection
-from db import Database, Db_helper
+from db import Database, DbHelper
 
 class Server:
     start_time = 0
@@ -15,7 +15,7 @@ class Server:
 
     def __init__(self):
         self.start_time = datetime.now()
-        self.db_helper = Db_helper()
+        self.db_helper = DbHelper()
 
     def start_server(self):
         connection = Connection()
@@ -84,7 +84,7 @@ class Server:
                     return "Stop", "Stop", connection.host, sender
 
         elif head == "Authentication":
-            authenticator = Authenticator(text)
+            authenticator = UserAuthenticator(text)
             auth_dict = authenticator.verify_login()
             return "Authentication_answer", auth_dict, connection.host, sender
         elif head == "Acc_type":
@@ -121,10 +121,10 @@ class Server:
         
         
 
-class Authenticator():
+class UserAuthenticator():
     def __init__(self, message):
         self.text = message
-        self.db_helper = Db_helper()
+        self.db_helper = DbHelper()
         
     
     def verify_login(self):
