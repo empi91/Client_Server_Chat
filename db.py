@@ -118,3 +118,42 @@ class Database:
     def dump_db(self, existing_db):
         with open(self.DB_FILE, "w") as db:
             json.dump(existing_db, db, indent=4)
+            
+            
+            
+class Db_helper:
+    def __init__(self):
+        self.db = Database()
+        
+        
+    def get_msg_from_inbox(self, login):
+        return self.db.read_msg_from_inbox(login)
+        
+        
+    def check_if_registered(self, login):
+        if self.db.check_user_in_db(login):
+            return True
+        return False
+
+
+    def register_new_user(self, login, password):
+        self.db.add_user_to_db(login, password)
+
+
+    def get_stored_password(self, login):
+        return self.db.get_user_password(login)
+
+
+    def add_account_type(self, text):
+        return self.db.modify_db(text["login"], "Account type", text["acc_type"])
+
+    
+    def add_msg_to_db(self, receiver, sender, message):
+        return self.db.add_msg_to_db(receiver, sender, message)
+
+
+    def check_recv_inbox(self, login):
+        inbox_size = self.db.check_user_inbox(login)
+        if inbox_size < 5:
+            return True
+        return False

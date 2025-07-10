@@ -7,7 +7,7 @@ import errno
 from message import Message
 from datetime import datetime
 from connection import Connection
-from db import Database
+from db import Database, Db_helper
 
 class Server:
     start_time = 0
@@ -15,6 +15,7 @@ class Server:
 
     def __init__(self):
         self.start_time = datetime.now()
+        self.db_helper = Db_helper()
 
     def start_server(self):
         connection = Connection()
@@ -69,7 +70,8 @@ class Server:
                     }
                     return "Command", info_dict, connection.host, sender
                 case "inbox":
-                    message_sender, message = self.get_msg_from_inbox(sender)
+                    #message_sender, message = self.get_msg_from_inbox(sender)
+                    message_sender, message = self.db_helper.get_msg_from_inbox(sender)
 
                     if message == "EMPTY":
                         return "Error", "Inbox empty", connection.host, sender
@@ -86,16 +88,16 @@ class Server:
             auth_dict = self.authenticate_user(text)
             return "Authentication_answer", auth_dict, connection.host, sender
         elif head == "Acc_type":
-            update_status = self.add_account_type(text)
+            update_status = self.db_helper.add_account_type(text)
             acc_update_dict = {
                 "update_status": update_status,
             }
             return "Account_type_update", acc_update_dict, connection.host, sender
 
         elif head == "Message":
-            if self.check_if_registered(receiver):
-                if self.check_recv_inbox(receiver):
-                    status = self.add_msg_to_db(receiver, sender, text)
+            if self.db_helper.check_if_registered(receiver):
+                if self.db_helper.check_recv_inbox(receiver):
+                    status = self.db_helper.add_msg_to_db(receiver, sender, text)
                     return "Status", status, connection.host, sender
                 else:
                     status = "Receiver inbox is full"
@@ -110,8 +112,8 @@ class Server:
     def authenticate_user(self, text):
 
 
-        if self.check_if_registered(text["login"]):
-            stored_password = self.get_stored_password(text["login"])
+        if self.db_helper.check_if_registered(text["login"]):
+            stored_password = self.db_helper.get_stored_password(text["login"])
             if self.verify_password(text["password"], stored_password):
             # if self.check_if_auth_correct(text["login"], hashed_password):
                 answer = {
@@ -125,7 +127,7 @@ class Server:
                 }
         else:
             hashed_password = self.hash_password(text["password"])
-            self.register_new_user(text["login"], hashed_password)
+            self.db_helper.register_new_user(text["login"], hashed_password)
             answer = {
                 "is_registered": False,
                 "login_successfull": True,
@@ -151,45 +153,6 @@ class Server:
         #return ph.hash(password)     ## removing argon2 for iPad
         return password
     
-    def check_if_registered(self, login):
-        db = Database()
-        if db.check_user_in_db(login):
-            return True
-        return False
-
-
-    def register_new_user(self, login, password):
-        db = Database()
-        db.add_user_to_db(login, password)
-
-
-    def get_stored_password(self, login):
-        db = Database()
-        return db.get_user_password(login)
-
-
-    def add_account_type(self, text):
-        db = Database()
-        return db.modify_db(text["login"], "Account type", text["acc_type"])
-
-    
-    def add_msg_to_db(self, receiver, sender, message):
-        db = Database()
-        return db.add_msg_to_db(receiver, sender, message)
-
-
-    def check_recv_inbox(self, login):
-        db = Database()
-        inbox_size = db.check_user_inbox(login)
-        if inbox_size < 5:
-            return True
-        return False
-
-
-    def get_msg_from_inbox(self, login):
-        db = Database()
-        return db.read_msg_from_inbox(login)
-
 
     def calc_uptime(self) -> tuple[int, int, int, int]:
         now_time = datetime.now()
@@ -200,3 +163,5 @@ class Server:
         seconds = uptime_delta.seconds
 
         return days, hours, minutes, seconds
+        
+    
