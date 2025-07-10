@@ -117,28 +117,41 @@ class Client:
                 else:
                     print("Wrong password, try again!")
             else:
-                acc_type = input("New user registered, please add account type: admin/user: ")
+                while True:
+                    if self.set_account_type(password, connection):
+                        self.login = True
+                        return
+                
+                    
+                    
+                
+                
+    def set_account_type(self, password, connection):
+        acc_type = input("New user registered, please add account type: admin/user: ")
+        if acc_type not in ['admin', 'user']:
+            print("[ERROR] Wrong account type")
+            return False
+            
+        text = {
+            "login": self.name,
+            "password": password,
+            "acc_type": acc_type,
+            }
 
-                text = {
-                "login": self.name,
-                "password": password,
-                "acc_type": acc_type,
-                }
+        message = Message(text, "Acc_type")
+        json_message  = message.encode_message()
+        connection.send(json_message)
+        
+        acc_type_answer = connection.recv(1024).decode("utf-8")
+        decoded_header, decoded_answer, decoded_sender, decoded_receiver = message.decode_message(acc_type_answer)
 
-                message = Message(text, "Acc_type")
-                json_message  = message.encode_message()
-                connection.send(json_message)
-
-                acc_type_answer = connection.recv(1024).decode("utf-8")
-                decoded_header, decoded_answer, decoded_sender, decoded_receiver = message.decode_message(acc_type_answer)
-
-                if decoded_answer["update_status"]:
-                    print("Account type updated successfully")
-                else:
-                    print("Account type update failed")
-
-                self.login = True
-                return
+        if decoded_answer["update_status"]:
+            print("Account type updated successfully")
+            return True
+        else:
+            print("Account type update failed")
+            return False
+        
 
 
 
