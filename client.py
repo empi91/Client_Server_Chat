@@ -4,6 +4,7 @@ import sys
 #import maskpass
 from message import Message
 from connection import Connection
+#from collections import namedtuple
 
 
 class Client:
@@ -26,6 +27,7 @@ class Client:
             while True:
                 command = input(f"{self.name}>: ")
 
+                #header, text, sender, receiver = self.check_input_command(command, connection)
                 header, text, sender, receiver = self.check_input_command(command, connection)
                 if not header:
                     continue
@@ -40,8 +42,8 @@ class Client:
                 self.check_return_msg(decoded_header, decoded_answer, decoded_sender, decoded_receiver)
 
 
-    def check_input_command(self, command, connection):
-        match command:
+    def check_input_command(self, command, connection):   
+        match command.lower():
             case "!message":
                 header = "Message"
                 sender = self.name
@@ -96,6 +98,12 @@ class Client:
             self.name = input("Username: ")
             #password = maskpass.askpass("Password: ") 
             password = input("Password: ")
+            if not self.name or not isinstance(self.name, str):
+                print("Empty login, try again.")
+                continue
+            if not password or not isinstance(password, str):
+                print("Empty password, try again.")
+                continue
 
             text = {
                 "login": self.name,

@@ -8,6 +8,7 @@ from message import Message
 from datetime import datetime
 from connection import Connection
 from db import Database, DbHelper
+from collections import namedtuple
 
 class Server:
     start_time = 0
@@ -49,9 +50,11 @@ class Server:
             match text.lower():
                 case "help":
                     comm_dict = {
-                        "help": "Displays list of all server commands",
-                        "uptime": "Returns server lifetime",
-                        "info": "Returns server version and start date",
+                        "!help": "Displays list of all server commands",
+                        "!uptime": "Returns server lifetime",
+                        "!info": "Returns server version and start date",
+                        "!inbox":"Gets first unread message from your inbox",
+                        "!message": "Sends message to other user",
                         "stop": "Stops server and client simultaneously"
                     }
                     return "Command", comm_dict, connection.host, sender
