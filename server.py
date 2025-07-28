@@ -8,7 +8,7 @@ from message import Message
 from datetime import datetime
 from connection import Connection
 from db import Database, DbHelper
-from collections import namedtuple
+# from collections import namedtuple
 
 class Server:
     start_time = 0
@@ -32,12 +32,15 @@ class Server:
                     rec_mess = conn.recv(1024).decode("utf-8")
                     if not rec_mess:
                         break
-                    message = Message(rec_mess)
-                    header, text, sender, receiver = message.decode_message(rec_mess)
+                    # message = Message(rec_mess)
+                    recv_message = Message()
+                    # header, text, sender, receiver = message.decode_message(rec_mess)
+                    recv_message.decode_message(rec_mess)
 
                     try:
-                        message.header, message.text, message.sender, message.receiver = self.process_message(header, text, sender, receiver, connection)
-                        json_answer = message.encode_message()
+                        # message.header, message.text, message.sender, message.receiver = self.process_message(header, text, sender, receiver, connection)
+                        sending_msg = self.process_message(recv_message, connection)
+                        json_answer = sending_msg.encode_message()
                         conn.send(json_answer)
 
                     except IOError as e:
@@ -45,9 +48,12 @@ class Server:
                             pass
     
 
-    def process_message(self, head, text, sender, receiver, connection):
-        if head == "Command":
-            match text.lower():
+    # def process_message(self, head, text, sender, receiver, connection):
+    def process_message(self, message, connection):
+        # if head == "Command":
+        if message.header == "Command":
+            # match text.lower():
+            match message.text.lower():
                 case "help":
                     comm_dict = {
                         "!help": "Displays list of all server commands",
@@ -57,59 +63,95 @@ class Server:
                         "!message": "Sends message to other user",
                         "stop": "Stops server and client simultaneously"
                     }
-                    return "Command", comm_dict, connection.host, sender
+
+                    message = Message("Command", comm_dict, connection.host, message.sender)
+                    # return "Command", comm_dict, connection.host, sender
+                    return message
 
                 case "uptime":
                     days, hours, minutes, seconds = self.calc_uptime()
                     uptime_dict = {
                         "Server uptime": f"Server is active for {days} days. {hours} hours, {minutes} minutes and {seconds} seconds"
                     }
-                    return "Command", uptime_dict, connection.host, sender
+                    message = Message("Command", uptime_dict, connection.host, message.sender)
+                    # return "Command", uptime_dict, connection.host, sender
+                    return message
 
                 case "info":
                     info_dict = {
                         "Server version": self.SERVER_VERSION,
                         "Server start date": f"{self.start_time}"
                     }
-                    return "Command", info_dict, connection.host, sender
-                case "inbox":
-                    message_sender, message = self.db_helper.get_msg_from_inbox(sender)
 
-                    if message == "EMPTY":
-                        return "Error", "Inbox empty", connection.host, sender
+                    message = Message("Command", info_dict, connection.host, message.sender)
+                    # return "Command", info_dict, connection.host, sender
+                    return message
+
+                case "inbox":
+                    message_sender, message_text = self.db_helper.get_msg_from_inbox(message.sender)
+
+                    if message_text == "EMPTY":
+                        message = Message("Error", "Inbox empty", connection.host, message.sender)
+                        # return "Error", "Inbox empty", connection.host, sender
+                        return message
                     else:
                         inbox = {
                             "Sender": message_sender,
                             "Message": message, 
                         }
-                        return "Inbox_message", inbox, connection.host, sender
-                case "stop":
-                    return "Stop", "Stop", connection.host, sender
+                        message = Message("Inbox_message", inbox, connection.host, message.sender)
+                        # return "Inbox_message", inbox, connection.host, sender
+                        return message
 
-        elif head == "Authentication":
-            authenticator = UserAuthenticator(text)
+                case "stop":
+                    message = Message("Stop", "Stop", connection.host, message.sender)
+                    # return "Stop", "Stop", connection.host, sender
+                    return message
+
+        # elif head == "Authentication":
+        elif message.header == "Authentication":
+            authenticator = UserAuthenticator(message.text)
             auth_dict = authenticator.verify_login()
-            return "Authentication_answer", auth_dict, connection.host, sender
-        elif head == "Acc_type":
-            update_status = self.db_helper.add_account_type(text)
+
+            message = Message("Authentication_answer", auth_dict, connection.host, message.sender)
+            # return "Authentication_answer", auth_dict, connection.host, sender
+            return message
+        # elif head == "Acc_type":
+        elif message.header == "Acc_type":
+            update_status = self.db_helper.add_account_type(message.text)
             acc_update_dict = {
                 "update_status": update_status,
             }
-            return "Account_type_update", acc_update_dict, connection.host, sender
 
-        elif head == "Message":
-            if self.db_helper.check_if_registered(receiver):
-                if self.db_helper.check_recv_inbox(receiver):
-                    status = self.db_helper.add_msg_to_db(receiver, sender, text)
-                    return "Status", status, connection.host, sender
+            message = Message("Account_type_update", acc_update_dict, connection.host, message.sender)
+            # return "Account_type_update", acc_update_dict, connection.host, sender
+            return message
+
+        # elif head == "Message":
+        elif message.header == "Message":
+            if self.db_helper.check_if_registered(message.receiver):
+                if self.db_helper.check_recv_inbox(message.receiver):
+                    status = self.db_helper.add_msg_to_db(message.receiver, message.sender, message.text)
+
+                    message = Message("Status", status, connection.host, message.sender)
+                    # return "Status", status, connection.host, sender
+                    return message
                 else:
                     status = "Receiver inbox is full"
-                    return "Error", status, connection.host, sender
+
+                    message = Message("Error", status, connection.host, message.sender)
+                    # return "Error", status, connection.host, sender
+                    return message
             else:
                 status = "Receiver not existing in database"
-                return "Error", status, connection.host, sender
+
+                message = Message("Error", status, connection.host, message.sender)
+                # return "Error", status, connection.host, sender
+                return message
         else:
-            return "Error", "Invalid message header", connection.host, sender
+            message = Message("Error", "Invalid message header", connection.host, message.sender)
+            # return "Error", "Invalid message header", connection.host, sender
+            return message
    
 
     def calc_uptime(self) -> tuple[int, int, int, int]:

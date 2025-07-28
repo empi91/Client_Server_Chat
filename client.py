@@ -4,7 +4,7 @@ import sys
 #import maskpass
 from message import Message
 from connection import Connection
-#from collections import namedtuple
+# from collections import namedtuple
 
 
 class Client:
@@ -28,18 +28,21 @@ class Client:
                 command = input(f"{self.name}>: ")
 
                 #header, text, sender, receiver = self.check_input_command(command, connection)
-                header, text, sender, receiver = self.check_input_command(command, connection)
-                if not header:
+                sender_message = self.check_input_command(command, connection)
+                if not sender_message:
                     continue
 
-                message = Message(text, header, sender, receiver)
-                json_message = message.encode_message()
-                s.send(json_message)
+                # message = Message(text, header, sender, receiver)
+                sender_message_json = sender_message.encode_message()
+                s.send(sender_message_json)
 
-                mess_received = s.recv(1024).decode("utf-8")
-                decoded_header, decoded_answer, decoded_sender, decoded_receiver = message.decode_message(mess_received)
+                received_bytes = s.recv(1024).decode("utf-8")
+                received_message = Message()
+                # decoded_header, decoded_answer, decoded_sender, decoded_receiver = received_message.decode_message(received_bytes)
+                received_message.decode_message(received_bytes)
 
-                self.check_return_msg(decoded_header, decoded_answer, decoded_sender, decoded_receiver)
+                # self.check_return_msg(decoded_header, decoded_answer, decoded_sender, decoded_receiver)
+                self.check_return_msg(received_message)
 
 
     def check_input_command(self, command, connection):   
@@ -50,30 +53,49 @@ class Client:
                 receiver = input(f"{self.name}>: Please add receiver username: ")
                 text = input(f"{self.name}>: Please type your message: ")
 
-                return header, text, sender, receiver
-            case "!info":          
-                return "Command", "info", self.name, connection.host
+                message = Message(header, text, sender, receiver)
+
+                # return header, text, sender, receiver
+                return message
+            case "!info":   
+                message = Message("Command", "info", self.name, connection.host)       
+                # return "Command", "info", self.name, connection.host
+                return message
             case "!uptime":
-                return "Command", "uptime", self.name, connection.host
+                message = Message("Command", "uptime", self.name, connection.host)       
+                # return "Command", "uptime", self.name, connection.host
+                return message
             case "!help":
-                return "Command", "help", self.name, connection.host
+                message = Message("Command", "help", self.name, connection.host)       
+                # return "Command", "help", self.name, connection.host
+                return message
             case "!stop":
-                return "Command", "stop", self.name, connection.host
+                message = Message("Command", "stop", self.name, connection.host)       
+                # return "Command", "stop", self.name, connection.host
+                return message
             case "!inbox":
-                return "Command", "inbox", self.name, connection.host
+                message = Message("Command", "inbox", self.name, connection.host)       
+                # return "Command", "inbox", self.name, connection.host
+                return message
             case _:
                 print("Wrong command, try again")
-                return None, None, None, None
+                message = Message (None, None, None, None)
+                # return None, None, None, None
+                return message
 
 
-    def check_return_msg(self, header, message, sender, receiver):
-        match header:
+    # def check_return_msg(self, header, message, sender, receiver):
+    def check_return_msg(self, rec_message):
+        # match header:
+        match rec_message.header:
             case "Command":
-                for key, value in message.items():
+                # for key, value in message.items():
+                for key, value in rec_message.text.items():
                     print(f"{key}: {value}")
                 
             case "Status":
-                if message:
+                # if message:
+                if rec_message.text:
                     print("Operation finished successfully")
                 else:
                     print("Operation failed")
@@ -82,10 +104,12 @@ class Client:
                 sys.exit()
 
             case "Inbox_message":
-                print(f"Receiver message from {message['Sender']}: \n{message['Message']}")
+                # print(f"Receiver message from {message['Sender']}: \n{message['Message']}")
+                print(f"Receiver message from {rec_message.sender}: \n{rec_message.text}")
 
             case "Error":
-                print(f"[ERROR] {message}")
+                # print(f"[ERROR] {message}")
+                print(f"[ERROR] {rec_message.text}")
 
             case _:
                 print("Empty server answer")
@@ -109,16 +133,20 @@ class Client:
                 "login": self.name,
                 "password": password,
             }
-            message = Message(text, "Authentication")
+            message = Message("Authentication", text, "Authenticator", "Server")
             json_message = message.encode_message()
 
             connection.send(json_message)
 
             auth_answer = connection.recv(1024).decode("utf-8")
-            decoded_header, decoded_answer, decoded_sender, decoder_receiver = message.decode_message(auth_answer)
+            auth_message = Message()
+            # decoded_header, decoded_answer, decoded_sender, decoder_receiver = message.decode_message(auth_answer)
+            auth_message.decode_message(auth_answer)
 
-            if decoded_answer["is_registered"]:
-                if decoded_answer["login_successfull"]:
+            # if decoded_answer["is_registered"]:
+            if auth_message.text["is_registered"]:
+                # if decoded_answer["login_successfull"]:
+                if auth_message.text["login_successfull"]:
                     print("Sign in successfull, welcome back!")
                     self.login = True
                     return
@@ -146,14 +174,16 @@ class Client:
             "acc_type": acc_type,
             }
 
-        message = Message(text, "Acc_type")
+        message = Message("Acc_type", text, "Client", "Server")
         json_message  = message.encode_message()
         connection.send(json_message)
         
         acc_type_answer = connection.recv(1024).decode("utf-8")
-        decoded_header, decoded_answer, decoded_sender, decoded_receiver = message.decode_message(acc_type_answer)
+        decoded_message = Message()
+        # decoded_header, decoded_answer, decoded_sender, decoded_receiver = message.decode_message(acc_type_answer)
+        decoded_message.decode_message(acc_type_answer)
 
-        if decoded_answer["update_status"]:
+        if decoded_message.text["update_status"]:
             print("Account type updated successfully")
             return True
         else:

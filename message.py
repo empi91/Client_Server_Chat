@@ -4,7 +4,7 @@ import typing
 
 
 class Message:
-    def __init__(self, text, header=None, sender=None, receiver=None):
+    def __init__(self, header=None, text=None, sender=None, receiver=None):
         self.header = header
         self.text = text
         self.sender = sender
@@ -29,6 +29,7 @@ class Message:
             self.sender = text_message["Sender"]
             self.receiver = text_message["Receiver"]
 
-            return self.header, self.text, self.sender, self.receiver
+            # return self.header, self.text, self.sender, self.receiver
+            return 1            # Unify return tyopes with error below
         except json.JSONDecodeError:
             return "Error", "[Invalid JSON]: " + self.text, None, None
