@@ -14,7 +14,7 @@ class Database:
                 json.dump(empty_data, db, indent=4)
        
 
-    def check_user_in_db(self, username):
+    def check_user_in_db(self, username: str) -> bool:
         existing_db = self.open_db()
 
         for user in existing_db["users"]:
@@ -23,7 +23,7 @@ class Database:
         return False
  
  
-    def get_user_password(self, username):
+    def get_user_password(self, username: str) -> str:
         existing_db = self.open_db()
 
         for user in existing_db["users"]:
@@ -52,7 +52,7 @@ class Database:
         pass
 
 
-    def modify_db(self, username, field, value):
+    def modify_db(self, username: str, field: str, value: str) -> bool:
         try:
             existing_db = self.open_db()
 
@@ -67,7 +67,7 @@ class Database:
             return False
 
 
-    def add_msg_to_db(self, username, sender, message):
+    def add_msg_to_db(self, username, sender, message) -> bool:
         try:
             existing_db = self.open_db()
 
@@ -87,7 +87,7 @@ class Database:
             return False
 
 
-    def read_msg_from_inbox(self, username):
+    def read_msg_from_inbox(self, username) -> tuple[str, str]:
         existing_db = self.open_db()
 
         for user in existing_db["users"]:
@@ -101,7 +101,7 @@ class Database:
                 return username, "EMPTY"
 
 
-    def check_user_inbox(self, username):
+    def check_user_inbox(self, username) -> int:
         existing_db = self.open_db()
 
         for user in existing_db["users"]:

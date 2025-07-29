@@ -15,7 +15,7 @@ class Client:
     def start_client(self):
         connection = Connection()
 
-        with connection.create_client_connection() as s:
+        with connection.create_connection() as s:
             s.connect((connection.host, connection.port))
             
             while not self.login:
@@ -41,7 +41,7 @@ class Client:
                 self.check_return_msg(received_message)
 
 
-    def check_input_command(self, command, connection):
+    def check_input_command(self, command: str, connection: Connection) -> Message | ErrorMessage:
         match command.lower():
             case "!message":
                 header = "Message"
@@ -72,7 +72,7 @@ class Client:
                 return message
 
 
-    def check_return_msg(self, rec_message):
+    def check_return_msg(self, rec_message: Message):
         match rec_message.header:
             case "Command":
                 for key, value in rec_message.text.items():
@@ -97,7 +97,7 @@ class Client:
                 print("Empty server answer")
                 
  
-    def user_auth(self, connection):
+    def user_auth(self, connection: Connection):
         print("Welcome on our server. Please sign in or create new account.")
 
         while True:
@@ -141,7 +141,7 @@ class Client:
                     
                 
                 
-    def set_account_type(self, password, connection):
+    def set_account_type(self, password: str, connection):
         acc_type = input("New user registered, please add account type: admin/user: ")
         if acc_type not in ['admin', 'user']:
             print("[ERROR] Wrong account type")

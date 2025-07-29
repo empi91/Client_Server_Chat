@@ -19,7 +19,7 @@ class Server:
 
     def start_server(self):
         connection = Connection()
-        with connection.create_server_connection() as s:
+        with connection.create_connection(is_server=True) as s:
             s.bind((connection.host, connection.port))
             s.listen(5)
             print("Server online")
@@ -44,7 +44,7 @@ class Server:
                             pass
     
 
-    def process_message(self, message, connection):
+    def process_message(self, message: Message, connection: Connection) -> Message:
         if message.header == "Command":
             match message.text.lower():
                 case "help":
@@ -150,7 +150,7 @@ class UserAuthenticator():
         self.db_helper = DbHelper()
         
     
-    def verify_login(self):
+    def verify_login(self) -> dict:
         if self.db_helper.check_if_registered(self.text["login"]):
             stored_password = self.db_helper.get_stored_password(self.text["login"])
             if self.verify_password(self.text["password"], stored_password):
@@ -174,7 +174,7 @@ class UserAuthenticator():
         return answer
     
         
-    def verify_password(self, input_pass, stored_pass):
+    def verify_password(self, input_pass: str, stored_pass: str) -> bool:
         ph = PasswordHasher()
         try:
            ph.verify(stored_pass, input_pass)
@@ -186,12 +186,11 @@ class UserAuthenticator():
         # return False
     
     
-    def hash_password(self, password):
+    def hash_password(self, password: str) -> str:
         ph = PasswordHasher()        ## removing argon2 for iPad
         return ph.hash(password)     ## removing argon2 for iPad
         # return password
-        
-        
-        
-        
-    
+
+
+
+

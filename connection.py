@@ -12,21 +12,15 @@ class Connection:
         print(f"Host: {self.host}, Port: {self.port}")
         
 
-    def create_client_connection(self):
+    def create_connection(self, is_server=False):
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            if is_server:
+                self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             return self.socket
         except socket.error as s:
             print(f"[SOCKET ERROR]: {s}")
 
-
-    def create_server_connection(self):
-        try:
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            return self.socket
-        except socket.error as s:
-            print(f"[SOCKET ERROR]: {s}")
 
 
 
