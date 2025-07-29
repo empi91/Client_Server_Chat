@@ -1,10 +1,9 @@
 # client.py
 
 import sys
-#import maskpass
-from message import Message
+import maskpass     # pip install maskpass
+from message import Message, ErrorMessage
 from connection import Connection
-# from collections import namedtuple
 
 
 class Client:
@@ -27,25 +26,22 @@ class Client:
             while True:
                 command = input(f"{self.name}>: ")
 
-                #header, text, sender, receiver = self.check_input_command(command, connection)
                 sender_message = self.check_input_command(command, connection)
-                if not sender_message:
+                if isinstance(sender_message, ErrorMessage):
+                    print("[Error] " + sender_message.text)
                     continue
 
-                # message = Message(text, header, sender, receiver)
                 sender_message_json = sender_message.encode_message()
                 s.send(sender_message_json)
 
                 received_bytes = s.recv(1024).decode("utf-8")
                 received_message = Message()
-                # decoded_header, decoded_answer, decoded_sender, decoded_receiver = received_message.decode_message(received_bytes)
                 received_message.decode_message(received_bytes)
 
-                # self.check_return_msg(decoded_header, decoded_answer, decoded_sender, decoded_receiver)
                 self.check_return_msg(received_message)
 
 
-    def check_input_command(self, command, connection):   
+    def check_input_command(self, command, connection):
         match command.lower():
             case "!message":
                 header = "Message"
@@ -55,46 +51,34 @@ class Client:
 
                 message = Message(header, text, sender, receiver)
 
-                # return header, text, sender, receiver
                 return message
             case "!info":   
                 message = Message("Command", "info", self.name, connection.host)       
-                # return "Command", "info", self.name, connection.host
                 return message
             case "!uptime":
                 message = Message("Command", "uptime", self.name, connection.host)       
-                # return "Command", "uptime", self.name, connection.host
                 return message
             case "!help":
                 message = Message("Command", "help", self.name, connection.host)       
-                # return "Command", "help", self.name, connection.host
                 return message
             case "!stop":
                 message = Message("Command", "stop", self.name, connection.host)       
-                # return "Command", "stop", self.name, connection.host
                 return message
             case "!inbox":
                 message = Message("Command", "inbox", self.name, connection.host)       
-                # return "Command", "inbox", self.name, connection.host
                 return message
             case _:
-                print("Wrong command, try again")
-                message = Message (None, None, None, None)
-                # return None, None, None, None
+                message = ErrorMessage("Wrong command, try again!", "Server")
                 return message
 
 
-    # def check_return_msg(self, header, message, sender, receiver):
     def check_return_msg(self, rec_message):
-        # match header:
         match rec_message.header:
             case "Command":
-                # for key, value in message.items():
                 for key, value in rec_message.text.items():
                     print(f"{key}: {value}")
                 
             case "Status":
-                # if message:
                 if rec_message.text:
                     print("Operation finished successfully")
                 else:
@@ -104,11 +88,9 @@ class Client:
                 sys.exit()
 
             case "Inbox_message":
-                # print(f"Receiver message from {message['Sender']}: \n{message['Message']}")
-                print(f"Receiver message from {rec_message.sender}: \n{rec_message.text}")
+                print(f"Receiver message from {rec_message.text['Sender']}: \n{rec_message.text['Message']}")
 
             case "Error":
-                # print(f"[ERROR] {message}")
                 print(f"[ERROR] {rec_message.text}")
 
             case _:
@@ -120,8 +102,8 @@ class Client:
 
         while True:
             self.name = input("Username: ")
-            #password = maskpass.askpass("Password: ") 
-            password = input("Password: ")
+            password = maskpass.askpass("Password: ") 
+            # password = input("Password: ")
             if not self.name or not isinstance(self.name, str):
                 print("Empty login, try again.")
                 continue
@@ -140,12 +122,9 @@ class Client:
 
             auth_answer = connection.recv(1024).decode("utf-8")
             auth_message = Message()
-            # decoded_header, decoded_answer, decoded_sender, decoder_receiver = message.decode_message(auth_answer)
             auth_message.decode_message(auth_answer)
 
-            # if decoded_answer["is_registered"]:
             if auth_message.text["is_registered"]:
-                # if decoded_answer["login_successfull"]:
                 if auth_message.text["login_successfull"]:
                     print("Sign in successfull, welcome back!")
                     self.login = True
@@ -180,7 +159,6 @@ class Client:
         
         acc_type_answer = connection.recv(1024).decode("utf-8")
         decoded_message = Message()
-        # decoded_header, decoded_answer, decoded_sender, decoded_receiver = message.decode_message(acc_type_answer)
         decoded_message.decode_message(acc_type_answer)
 
         if decoded_message.text["update_status"]:

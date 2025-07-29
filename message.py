@@ -33,3 +33,14 @@ class Message:
             return 1            # Unify return tyopes with error below
         except json.JSONDecodeError:
             return "Error", "[Invalid JSON]: " + self.text, None, None
+
+
+class ErrorMessage(Message):
+    def __init__(self, text: str, sender: str):
+        super().__init__(header="Error", text=text, sender=sender, receiver=None)
+
+    def encode_message(self) -> bytes:
+        return super().encode_message()
+
+    def decode_message(self, json_text) -> tuple[str, str, str, str]:
+        return super().decode_message(json_text)

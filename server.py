@@ -2,13 +2,12 @@
 
 import socket
 import errno
-#from argon2 import PasswordHasher
-#from argon2.exceptions import VerifyMismatchError
+from argon2 import PasswordHasher       # pip install argon2-cffi
+from argon2.exceptions import VerifyMismatchError
 from message import Message
 from datetime import datetime
 from connection import Connection
 from db import Database, DbHelper
-# from collections import namedtuple
 
 class Server:
     start_time = 0
@@ -32,13 +31,10 @@ class Server:
                     rec_mess = conn.recv(1024).decode("utf-8")
                     if not rec_mess:
                         break
-                    # message = Message(rec_mess)
                     recv_message = Message()
-                    # header, text, sender, receiver = message.decode_message(rec_mess)
                     recv_message.decode_message(rec_mess)
 
                     try:
-                        # message.header, message.text, message.sender, message.receiver = self.process_message(header, text, sender, receiver, connection)
                         sending_msg = self.process_message(recv_message, connection)
                         json_answer = sending_msg.encode_message()
                         conn.send(json_answer)
@@ -48,11 +44,8 @@ class Server:
                             pass
     
 
-    # def process_message(self, head, text, sender, receiver, connection):
     def process_message(self, message, connection):
-        # if head == "Command":
         if message.header == "Command":
-            # match text.lower():
             match message.text.lower():
                 case "help":
                     comm_dict = {
@@ -65,7 +58,6 @@ class Server:
                     }
 
                     message = Message("Command", comm_dict, connection.host, message.sender)
-                    # return "Command", comm_dict, connection.host, sender
                     return message
 
                 case "uptime":
@@ -74,7 +66,6 @@ class Server:
                         "Server uptime": f"Server is active for {days} days. {hours} hours, {minutes} minutes and {seconds} seconds"
                     }
                     message = Message("Command", uptime_dict, connection.host, message.sender)
-                    # return "Command", uptime_dict, connection.host, sender
                     return message
 
                 case "info":
@@ -84,7 +75,6 @@ class Server:
                     }
 
                     message = Message("Command", info_dict, connection.host, message.sender)
-                    # return "Command", info_dict, connection.host, sender
                     return message
 
                 case "inbox":
@@ -92,31 +82,25 @@ class Server:
 
                     if message_text == "EMPTY":
                         message = Message("Error", "Inbox empty", connection.host, message.sender)
-                        # return "Error", "Inbox empty", connection.host, sender
                         return message
                     else:
                         inbox = {
                             "Sender": message_sender,
-                            "Message": message, 
+                            "Message": message_text, 
                         }
                         message = Message("Inbox_message", inbox, connection.host, message.sender)
-                        # return "Inbox_message", inbox, connection.host, sender
                         return message
 
                 case "stop":
                     message = Message("Stop", "Stop", connection.host, message.sender)
-                    # return "Stop", "Stop", connection.host, sender
                     return message
 
-        # elif head == "Authentication":
         elif message.header == "Authentication":
             authenticator = UserAuthenticator(message.text)
             auth_dict = authenticator.verify_login()
 
             message = Message("Authentication_answer", auth_dict, connection.host, message.sender)
-            # return "Authentication_answer", auth_dict, connection.host, sender
             return message
-        # elif head == "Acc_type":
         elif message.header == "Acc_type":
             update_status = self.db_helper.add_account_type(message.text)
             acc_update_dict = {
@@ -124,33 +108,27 @@ class Server:
             }
 
             message = Message("Account_type_update", acc_update_dict, connection.host, message.sender)
-            # return "Account_type_update", acc_update_dict, connection.host, sender
             return message
 
-        # elif head == "Message":
         elif message.header == "Message":
             if self.db_helper.check_if_registered(message.receiver):
                 if self.db_helper.check_recv_inbox(message.receiver):
                     status = self.db_helper.add_msg_to_db(message.receiver, message.sender, message.text)
 
                     message = Message("Status", status, connection.host, message.sender)
-                    # return "Status", status, connection.host, sender
                     return message
                 else:
                     status = "Receiver inbox is full"
 
                     message = Message("Error", status, connection.host, message.sender)
-                    # return "Error", status, connection.host, sender
                     return message
             else:
                 status = "Receiver not existing in database"
 
                 message = Message("Error", status, connection.host, message.sender)
-                # return "Error", status, connection.host, sender
                 return message
         else:
             message = Message("Error", "Invalid message header", connection.host, message.sender)
-            # return "Error", "Invalid message header", connection.host, sender
             return message
    
 
@@ -197,21 +175,21 @@ class UserAuthenticator():
     
         
     def verify_password(self, input_pass, stored_pass):
-        #ph = PasswordHasher()
-        #try:
-        #    ph.verify(stored_pass, input_pass)
-        #    return True
-        #except VerifyMismatchError:
-        #    return False
-        if stored_pass == input_pass:
-            return True
-        return False
+        ph = PasswordHasher()
+        try:
+           ph.verify(stored_pass, input_pass)
+           return True
+        except VerifyMismatchError:
+           return False
+        # if stored_pass == input_pass:
+        #     return True
+        # return False
     
     
     def hash_password(self, password):
-        #ph = PasswordHasher()        ## removing argon2 for iPad
-        #return ph.hash(password)     ## removing argon2 for iPad
-        return password
+        ph = PasswordHasher()        ## removing argon2 for iPad
+        return ph.hash(password)     ## removing argon2 for iPad
+        # return password
         
         
         
