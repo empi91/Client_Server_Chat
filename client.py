@@ -1,4 +1,8 @@
-# client.py
+"""Client module for socket-based communication with the server.
+
+This module provides the Client class that handles user authentication,
+command processing, and communication with the server.
+"""
 
 import sys
 import maskpass     # pip install maskpass
@@ -7,12 +11,24 @@ from connection import Connection
 
 
 class Client:
+    """Client for communicating with the socket server.
+    
+    Handles user authentication, command processing, and message exchange
+    with the server through socket connections.
+    """
+    
     def __init__(self):
+        """Initialize client with default values."""
         self.name = ""
         self.login = False
 
 
     def start_client(self):
+        """Start the client and handle the main communication loop.
+        
+        Establishes connection to server, handles authentication,
+        and processes user commands until disconnection.
+        """
         connection = Connection()
 
         with connection.create_connection() as s:
@@ -42,6 +58,15 @@ class Client:
 
 
     def check_input_command(self, command: str, connection: Connection) -> Message | ErrorMessage:
+        """Process user input commands and create appropriate messages.
+        
+        Args:
+            command: The command string entered by the user.
+            connection: The connection object for server details.
+            
+        Returns:
+            A Message object for valid commands or ErrorMessage for invalid ones.
+        """
         match command.lower():
             case "!message":
                 header = "Message"
@@ -73,6 +98,11 @@ class Client:
 
 
     def check_return_msg(self, rec_message: Message):
+        """Process and display server responses.
+        
+        Args:
+            rec_message: The message received from the server.
+        """
         match rec_message.header:
             case "Command":
                 for key, value in rec_message.text.items():
@@ -98,6 +128,14 @@ class Client:
                 
  
     def user_auth(self, connection: Connection):
+        """Handle user authentication process.
+        
+        Manages login for existing users and registration for new users,
+        including account type selection.
+        
+        Args:
+            connection: The connection object for communicating with server.
+        """
         print("Welcome on our server. Please sign in or create new account.")
 
         while True:
@@ -142,6 +180,15 @@ class Client:
                 
                 
     def set_account_type(self, password: str, connection):
+        """Set account type for newly registered users.
+        
+        Args:
+            password: The user's password.
+            connection: The connection object for server communication.
+            
+        Returns:
+            True if account type was successfully set, False otherwise.
+        """
         acc_type = input("New user registered, please add account type: admin/user: ")
         if acc_type not in ['admin', 'user']:
             print("[ERROR] Wrong account type")

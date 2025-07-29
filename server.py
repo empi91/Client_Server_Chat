@@ -1,4 +1,9 @@
-# server.py 
+"""Server module for handling client connections and requests.
+
+This module provides the Server class that manages client connections,
+processes various types of messages, and coordinates with the database
+for user management and message storage.
+"""
 
 import socket
 import errno
@@ -10,14 +15,27 @@ from connection import Connection
 from db import Database, DbHelper
 
 class Server:
+    """Socket server for handling client connections and requests.
+    
+    Manages client connections, processes various message types including
+    commands, authentication, and user messages. Coordinates with database
+    for data persistence.
+    """
+    
     start_time = 0
     SERVER_VERSION = '1.2.0'
 
     def __init__(self):
+        """Initialize server with start time and database helper."""
         self.start_time = datetime.now()
         self.db_helper = DbHelper()
 
     def start_server(self):
+        """Start the server and listen for client connections.
+        
+        Creates socket connection, binds to address, and handles
+        incoming client connections and messages.
+        """
         connection = Connection()
         with connection.create_connection(is_server=True) as s:
             s.bind((connection.host, connection.port))
@@ -45,6 +63,18 @@ class Server:
     
 
     def process_message(self, message: Message, connection: Connection) -> Message:
+        """Process incoming messages and generate appropriate responses.
+        
+        Routes different message types to appropriate handlers and returns
+        the corresponding response message.
+        
+        Args:
+            message: The incoming message to process.
+            connection: The connection object for server details.
+            
+        Returns:
+            A response Message object.
+        """
         if message.header == "Command":
             match message.text.lower():
                 case "help":
@@ -133,6 +163,11 @@ class Server:
    
 
     def calc_uptime(self) -> tuple[int, int, int, int]:
+        """Calculate server uptime since startup.
+        
+        Returns:
+            A tuple containing (days, hours, minutes, seconds) of uptime.
+        """
         now_time = datetime.now()
         uptime_delta = now_time - self.start_time
         days = uptime_delta.days
@@ -145,12 +180,31 @@ class Server:
         
 
 class UserAuthenticator():
+    """Handles user authentication and password verification.
+    
+    Manages user login verification, password hashing, and new user
+    registration with secure password storage.
+    """
+    
     def __init__(self, message):
+        """Initialize authenticator with message data.
+        
+        Args:
+            message: Dictionary containing login and password information.
+        """
         self.text = message
         self.db_helper = DbHelper()
         
     
     def verify_login(self) -> dict:
+        """Verify user login credentials or register new user.
+        
+        Checks if user exists and verifies password, or registers
+        new user with hashed password if not found.
+        
+        Returns:
+            Dictionary containing authentication status information.
+        """
         if self.db_helper.check_if_registered(self.text["login"]):
             stored_password = self.db_helper.get_stored_password(self.text["login"])
             if self.verify_password(self.text["password"], stored_password):
@@ -175,6 +229,15 @@ class UserAuthenticator():
     
         
     def verify_password(self, input_pass: str, stored_pass: str) -> bool:
+        """Verify password against stored hash.
+        
+        Args:
+            input_pass: The plaintext password to verify.
+            stored_pass: The stored password hash.
+            
+        Returns:
+            True if password matches, False otherwise.
+        """
         ph = PasswordHasher()
         try:
            ph.verify(stored_pass, input_pass)
@@ -187,6 +250,14 @@ class UserAuthenticator():
     
     
     def hash_password(self, password: str) -> str:
+        """Hash a password using Argon2.
+        
+        Args:
+            password: The plaintext password to hash.
+            
+        Returns:
+            The hashed password string.
+        """
         ph = PasswordHasher()        ## removing argon2 for iPad
         return ph.hash(password)     ## removing argon2 for iPad
         # return password
