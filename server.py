@@ -22,7 +22,6 @@ class Server:
     for data persistence.
     """
     
-    start_time = 0
     SERVER_VERSION = '1.2.0'
 
     def __init__(self):
@@ -76,89 +75,143 @@ class Server:
             A response Message object.
         """
         if message.header == "Command":
-            match message.text.lower():
-                case "help":
-                    comm_dict = {
-                        "!help": "Displays list of all server commands",
-                        "!uptime": "Returns server lifetime",
-                        "!info": "Returns server version and start date",
-                        "!inbox":"Gets first unread message from your inbox",
-                        "!message": "Sends message to other user",
-                        "stop": "Stops server and client simultaneously"
-                    }
-
-                    message = Message("Command", comm_dict, connection.host, message.sender)
-                    return message
-
-                case "uptime":
-                    days, hours, minutes, seconds = self.calc_uptime()
-                    uptime_dict = {
-                        "Server uptime": f"Server is active for {days} days. {hours} hours, {minutes} minutes and {seconds} seconds"
-                    }
-                    message = Message("Command", uptime_dict, connection.host, message.sender)
-                    return message
-
-                case "info":
-                    info_dict = {
-                        "Server version": self.SERVER_VERSION,
-                        "Server start date": f"{self.start_time}"
-                    }
-
-                    message = Message("Command", info_dict, connection.host, message.sender)
-                    return message
-
-                case "inbox":
-                    message_sender, message_text = self.db_helper.get_msg_from_inbox(message.sender)
-
-                    if message_text == "EMPTY":
-                        message = Message("Error", "Inbox empty", connection.host, message.sender)
-                        return message
-                    else:
-                        inbox = {
-                            "Sender": message_sender,
-                            "Message": message_text, 
-                        }
-                        message = Message("Inbox_message", inbox, connection.host, message.sender)
-                        return message
-
-                case "stop":
-                    message = Message("Stop", "Stop", connection.host, message.sender)
-                    return message
+            return self.handle_command(message, connection)
 
         elif message.header == "Authentication":
-            authenticator = UserAuthenticator(message.text)
-            auth_dict = authenticator.verify_login()
-
-            message = Message("Authentication_answer", auth_dict, connection.host, message.sender)
-            return message
+            return self.handle_authentication(message, connection)
+        
         elif message.header == "Acc_type":
-            update_status = self.db_helper.add_account_type(message.text)
-            acc_update_dict = {
-                "update_status": update_status,
-            }
-
-            message = Message("Account_type_update", acc_update_dict, connection.host, message.sender)
-            return message
+            return self.handle_account_type(message, connection)
 
         elif message.header == "Message":
-            if self.db_helper.check_if_registered(message.receiver):
-                if self.db_helper.check_recv_inbox(message.receiver):
-                    status = self.db_helper.add_msg_to_db(message.receiver, message.sender, message.text)
+            return self.handle_sending_message(message, connection)
+            
+        else:
+            message = Message("Error", "Invalid message header", connection.host, message.sender)
+            return message
+        
 
-                    message = Message("Status", status, connection.host, message.sender)
+    def handle_command(self, message: Message, connection: Connection) -> Message:
+        """Handle server commands from clients.
+        
+        Processes commands like help, uptime, info, inbox, stop,
+        and message sending. Returns appropriate responses.
+        """
+        match message.text.lower():
+            case "help":
+                comm_dict = {
+                    "!help": "Displays list of all server commands",
+                    "!uptime": "Returns server lifetime",
+                    "!info": "Returns server version and start date",
+                    "!inbox":"Gets first unread message from your inbox",
+                    "!message": "Sends message to other user",
+                    "stop": "Stops server and client simultaneously"
+                }
+
+                message = Message("Command", comm_dict, connection.host, message.sender)
+                return message
+
+            case "uptime":
+                days, hours, minutes, seconds = self.calc_uptime()
+                uptime_dict = {
+                    "Server uptime": f"Server is active for {days} days. {hours} hours, {minutes} minutes and {seconds} seconds"
+                }
+                message = Message("Command", uptime_dict, connection.host, message.sender)
+                return message
+
+            case "info":
+                info_dict = {
+                    "Server version": self.SERVER_VERSION,
+                    "Server start date": f"{self.start_time}"
+                }
+
+                message = Message("Command", info_dict, connection.host, message.sender)
+                return message
+
+            case "inbox":
+                message_sender, message_text = self.db_helper.get_msg_from_inbox(message.sender)
+
+                if message_text == "EMPTY":
+                    message = Message("Error", "Inbox empty", connection.host, message.sender)
                     return message
                 else:
-                    status = "Receiver inbox is full"
-
-                    message = Message("Error", status, connection.host, message.sender)
+                    inbox = {
+                        "Sender": message_sender,
+                        "Message": message_text, 
+                    }
+                    message = Message("Inbox_message", inbox, connection.host, message.sender)
                     return message
+
+            case "stop":
+                message = Message("Stop", "Stop", connection.host, message.sender)
+                return message
+
+
+    def handle_authentication(self, message: Message, connection: Connection) -> Message:
+        """Handle user authentication and registration.
+        
+        Verifies user credentials or registers new users with hashed passwords.
+        
+        Args:
+            message: The incoming authentication message.
+            
+        Returns:
+            A response Message object with authentication status.
+        """
+        authenticator = UserAuthenticator(message.text)
+        auth_dict = authenticator.verify_login()
+
+        message = Message("Authentication_answer", auth_dict, connection.host, message.sender)
+        return message
+
+
+    def handle_account_type(self, message: Message, connection: Connection) -> Message:
+        """Handle account type updates for users.
+        
+        Updates the account type for a user based on the provided message.
+        
+        Args:
+            message: The incoming message containing account type information.
+            
+        Returns:
+            A response Message object with the update status.
+        """
+        update_status = self.db_helper.add_account_type(message.text)
+        acc_update_dict = {
+            "update_status": update_status,
+        }
+
+        message = Message("Account_type_update", acc_update_dict, connection.host, message.sender)
+        return message
+
+
+    def handle_sending_message(self, message: Message, connection: Connection) -> Message:
+        """Handle sending messages between users.
+        
+        Checks if the receiver exists and if their inbox is not full,
+        then stores the message in the database.
+        
+        Args:
+            message: The incoming message containing sender, receiver, and text.
+            
+        Returns:
+            A response Message object with the status of the operation.
+        """
+        if self.db_helper.check_if_registered(message.receiver):
+            if self.db_helper.check_recv_inbox(message.receiver):
+                status = self.db_helper.add_msg_to_db(message.receiver, message.sender, message.text)
+
+                message = Message("Status", status, connection.host, message.sender)
+                return message
             else:
-                status = "Receiver not existing in database"
+                status = "Receiver inbox is full"
 
                 message = Message("Error", status, connection.host, message.sender)
                 return message
         else:
-            message = Message("Error", "Invalid message header", connection.host, message.sender)
+            status = "Receiver not existing in database"
+
+            message = Message("Error", status, connection.host, message.sender)
             return message
    
 
