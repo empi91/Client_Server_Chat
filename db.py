@@ -84,11 +84,8 @@ class Database:
 
 
     def remove_user_from_db(self):
-        """Remove a user from the database.
-        
-        Note:
-            This method is not yet implemented.
-        """
+
+
         pass
 
 
@@ -215,7 +212,6 @@ class DbHelper:
     """
     
     def __init__(self):
-        """Initialize the database helper with a Database instance."""
         self.db = Database()
         
         

@@ -18,7 +18,6 @@ class Connection:
     port = 65432
 
     def __init__(self):
-        """Initialize connection with default socket settings."""
         self.socket = None
         print(f"Host: {self.host}, Port: {self.port}")
         

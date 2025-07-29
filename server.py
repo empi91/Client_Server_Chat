@@ -59,8 +59,8 @@ class Server:
 
                     except IOError as e:
                         if e.errno == errno.EPIPE:
-                            pass
-    
+                            print("[ERROR] Broken pipe error")
+                            break
 
     def process_message(self, message: Message, connection: Connection) -> Message:
         """Process incoming messages and generate appropriate responses.
@@ -187,11 +187,6 @@ class UserAuthenticator():
     """
     
     def __init__(self, message):
-        """Initialize authenticator with message data.
-        
-        Args:
-            message: Dictionary containing login and password information.
-        """
         self.text = message
         self.db_helper = DbHelper()
         

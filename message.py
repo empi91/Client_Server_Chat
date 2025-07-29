@@ -21,8 +21,8 @@ class Message:
         Args:
             header: The message type/category.
             text: The message content.
-            sender: The username of the message sender.
-            receiver: The username of the message recipient.
+            sender: The ID/username of the message sender.
+            receiver: The ID/username of the message recipient.
         """
         self.header = header
         self.text = text
@@ -75,29 +75,10 @@ class ErrorMessage(Message):
     """
     
     def __init__(self, text: str, sender: str):
-        """Initialize an error message.
-        
-        Args:
-            text: The error message content.
-            sender: The sender of the error message.
-        """
         super().__init__(header="Error", text=text, sender=sender, receiver=None)
 
     def encode_message(self) -> bytes:
-        """Encode the error message to JSON bytes.
-        
-        Returns:
-            UTF-8 encoded JSON bytes representing the error message.
-        """
         return super().encode_message()
 
     def decode_message(self, json_text) -> tuple[str, str, str, str]:
-        """Decode a JSON error message.
-        
-        Args:
-            json_text: JSON string to decode.
-            
-        Returns:
-            Tuple containing decoded message components.
-        """
         return super().decode_message(json_text)

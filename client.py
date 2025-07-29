@@ -18,7 +18,6 @@ class Client:
     """
     
     def __init__(self):
-        """Initialize client with default values."""
         self.name = ""
         self.login = False
 
