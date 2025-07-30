@@ -6,8 +6,9 @@ This module starts the server and handles the main application flow.
 import pathlib
 
 from server import Server
+from config import config
 
-PATH = pathlib.Path.cwd() / "data.json"
+PATH = pathlib.Path.cwd() / config.database.DB_FILE
 
 def main():
     """Start the server application."""

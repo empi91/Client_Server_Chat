@@ -13,14 +13,8 @@ class Connection:
     with appropriate settings for both client and server modes.
     """
     
-    #TODO Add reading those parameters from config file
-    host = '127.0.0.1'
-    port = 65432
-
     def __init__(self):
         self.socket = None
-        print(f"Host: {self.host}, Port: {self.port}")
-        
 
     def create_connection(self, is_server=False):
         """Create and configure a socket connection.

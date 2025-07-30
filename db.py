@@ -6,6 +6,7 @@ database system. It handles user authentication, message storage, and data persi
 
 import json 
 import os 
+from config import config
 
 class Database:
     """Low-level database operations for JSON file storage.
@@ -14,7 +15,7 @@ class Database:
     in a JSON-based database system.
     """
     
-    DB_FILE = "db.json"
+    DB_FILE = config.database.DB_FILE
 
     def __init__(self):
         """Initialize database and create empty database file if it doesn't exist."""
@@ -299,6 +300,6 @@ class DbHelper:
             True if inbox has less than 5 messages, False otherwise.
         """
         inbox_size = self.db.check_user_inbox(login)
-        if inbox_size < 5:
+        if inbox_size < config.database.MAX_INBOX_SIZE:
             return True
         return False

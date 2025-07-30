@@ -5,8 +5,6 @@ decoding, and managing messages exchanged between client and server.
 """
 
 import json
-import typing
-
 
 class Message:
     """Represents a message for client-server communication.
@@ -45,7 +43,7 @@ class Message:
         json_message = json.dumps(text_message).encode("utf-8")
         return json_message
 
-    def decode_message(self, json_text) -> tuple[str, str, str, str] | str:
+    def decode_message(self, json_text) -> bool:
         """Decode a JSON message and populate message attributes.
         
         Args:
@@ -61,11 +59,10 @@ class Message:
             self.sender = text_message["Sender"]
             self.receiver = text_message["Receiver"]
 
-            # return self.header, self.text, self.sender, self.receiver
-            return 1            # Unify return tyopes with error below
+            return True
         except json.JSONDecodeError:
-            return "Error", "[Invalid JSON]: " + self.text, None, None
-
+            print("[JSON ERROR]: Invalid JSON format.")
+            return False
 
 class ErrorMessage(Message):
     """Specialized message class for error messages.

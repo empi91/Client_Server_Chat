@@ -5,14 +5,14 @@ processes various types of messages, and coordinates with the database
 for user management and message storage.
 """
 
-import socket
 import errno
 from argon2 import PasswordHasher       # pip install argon2-cffi
 from argon2.exceptions import VerifyMismatchError
 from message import Message
 from datetime import datetime
 from connection import Connection
-from db import Database, DbHelper
+from db import DbHelper
+from config import config
 
 class Server:
     """Socket server for handling client connections and requests.
@@ -22,12 +22,12 @@ class Server:
     for data persistence.
     """
     
-    SERVER_VERSION = '1.2.0'
-
     def __init__(self):
         """Initialize server with start time and database helper."""
         self.start_time = datetime.now()
         self.db_helper = DbHelper()
+        self.server_host = config.network.HOST
+        self.server_port = config.network.PORT
 
     def start_server(self):
         """Start the server and listen for client connections.
@@ -37,15 +37,15 @@ class Server:
         """
         connection = Connection()
         with connection.create_connection(is_server=True) as s:
-            s.bind((connection.host, connection.port))
-            s.listen(5)
+            s.bind((self.server_host, self.server_port))
+            s.listen(config.network.MAX_CONNECTIONS)
             print("Server online")
             
             conn, addr = s.accept()
             with conn:
                 print(f"Client connected: {addr}")
                 while True:
-                    rec_mess = conn.recv(1024).decode("utf-8")
+                    rec_mess = conn.recv(config.network.BUFFER_SIZE).decode("utf-8")
                     if not rec_mess:
                         break
                     recv_message = Message()
@@ -87,7 +87,7 @@ class Server:
             return self.handle_sending_message(message, connection)
             
         else:
-            message = Message("Error", "Invalid message header", connection.host, message.sender)
+            message = Message("Error", "Invalid message header", self.server_host, message.sender)
             return message
         
 
@@ -100,51 +100,40 @@ class Server:
         match message.text.lower():
             case "help":
                 comm_dict = {
-                    "!help": "Displays list of all server commands",
-                    "!uptime": "Returns server lifetime",
-                    "!info": "Returns server version and start date",
-                    "!inbox":"Gets first unread message from your inbox",
-                    "!message": "Sends message to other user",
-                    "stop": "Stops server and client simultaneously"
+                    "HELP": config.ui.HELP_TEXT,
                 }
 
-                message = Message("Command", comm_dict, connection.host, message.sender)
-                return message
+                return Message("Command", comm_dict, self.server_host, message.sender)
 
             case "uptime":
                 days, hours, minutes, seconds = self.calc_uptime()
                 uptime_dict = {
                     "Server uptime": f"Server is active for {days} days. {hours} hours, {minutes} minutes and {seconds} seconds"
                 }
-                message = Message("Command", uptime_dict, connection.host, message.sender)
-                return message
+                return Message("Command", uptime_dict, self.server_host, message.sender)
 
             case "info":
                 info_dict = {
-                    "Server version": self.SERVER_VERSION,
+                    "Server version": config.server.SERVER_VERSION,
                     "Server start date": f"{self.start_time}"
                 }
 
-                message = Message("Command", info_dict, connection.host, message.sender)
-                return message
+                return Message("Command", info_dict, self.server_host, message.sender)
 
             case "inbox":
                 message_sender, message_text = self.db_helper.get_msg_from_inbox(message.sender)
 
                 if message_text == "EMPTY":
-                    message = Message("Error", "Inbox empty", connection.host, message.sender)
-                    return message
+                    return Message("Error", "Inbox empty", self.server_host, message.sender)
                 else:
                     inbox = {
                         "Sender": message_sender,
                         "Message": message_text, 
                     }
-                    message = Message("Inbox_message", inbox, connection.host, message.sender)
-                    return message
+                    return Message("Inbox_message", inbox, self.server_host, message.sender)
 
             case "stop":
-                message = Message("Stop", "Stop", connection.host, message.sender)
-                return message
+                return Message("Stop", "Stop", self.server_host, message.sender)
 
 
     def handle_authentication(self, message: Message, connection: Connection) -> Message:
@@ -161,7 +150,7 @@ class Server:
         authenticator = UserAuthenticator(message.text)
         auth_dict = authenticator.verify_login()
 
-        message = Message("Authentication_answer", auth_dict, connection.host, message.sender)
+        message = Message("Authentication_answer", auth_dict, self.server_host, message.sender)
         return message
 
 
@@ -181,7 +170,7 @@ class Server:
             "update_status": update_status,
         }
 
-        message = Message("Account_type_update", acc_update_dict, connection.host, message.sender)
+        message = Message("Account_type_update", acc_update_dict, self.server_host, message.sender)
         return message
 
 
@@ -201,17 +190,17 @@ class Server:
             if self.db_helper.check_recv_inbox(message.receiver):
                 status = self.db_helper.add_msg_to_db(message.receiver, message.sender, message.text)
 
-                message = Message("Status", status, connection.host, message.sender)
+                message = Message("Status", status, self.server_host, message.sender)
                 return message
             else:
                 status = "Receiver inbox is full"
 
-                message = Message("Error", status, connection.host, message.sender)
+                message = Message("Error", status, self.server_host, message.sender)
                 return message
         else:
             status = "Receiver not existing in database"
 
-            message = Message("Error", status, connection.host, message.sender)
+            message = Message("Error", status, self.server_host, message.sender)
             return message
    
 
