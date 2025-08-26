@@ -7,6 +7,7 @@ All commented lines are not being used at the moment, but might be implemented i
 
 from dataclasses import dataclass
 from typing import Tuple
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -86,6 +87,11 @@ class ServerConfig:
     SERVER_VERSION: str = '1.2.0'
 
 
+@dataclass(frozen=True)
+class TestsConfig:
+    """Path for fixtures used for testing"""
+    FIXTURES_PATH: str = Path(__file__).parent / 'tests' / 'fixtures'
+
 # Create a main config object that combines all configurations
 @dataclass(frozen=True)
 class AppConfig:
@@ -96,6 +102,7 @@ class AppConfig:
     security: SecurityConfig = SecurityConfig()
     ui: UIConfig = UIConfig()
     server: ServerConfig = ServerConfig()
+    tests: TestsConfig = TestsConfig()
     
     def validate(self) -> None:
         """Validate configuration values for consistency and correctness."""
