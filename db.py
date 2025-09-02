@@ -57,6 +57,7 @@ class Database:
         for user in existing_db["users"]:
             if user["Username"] == username:
                 return user["Password"]
+        return False
    
     
     def add_user_to_db(self, login, password, type=None):
@@ -259,7 +260,7 @@ class DbHelper:
             login: The username to get the password for.
             
         Returns:
-            The stored password hash.
+            The stored password hash or 'False' if user doesn't exist
         """
         return self.db.get_user_password(login)
 

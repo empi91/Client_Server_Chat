@@ -69,10 +69,12 @@ class TestDatabase(unittest.TestCase):
 
 
     def test_get_user_password(self):
-        """Testing retrieval of user passwords for existing users and handling non-existent users. """
-        
+        """Testing retrieval of user passwords for existing users and non-existent users. """
+        db = Database()
+        db.DB_FILE = os.path.join(self.fixtures_path, 'sample_db.json')
 
-        pass
+        self.assertEqual(db.get_user_password("testUser1"), "testPassword1")
+        self.assertFalse(db.get_user_password("nonExistingUser"), "testPassword1")
 
 
     def test_modify_db_valid_operations(self):
