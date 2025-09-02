@@ -22,6 +22,7 @@ class TestMessage(unittest.TestCase):
         with open(sample_message, 'r') as f:
             self.sample_data = json.load(f)
     
+
     def test_message_encoding_and_decoding(self):
         """Test basic message encoding and decoding functionality."""
         # Create a message with all fields
@@ -56,6 +57,7 @@ class TestMessage(unittest.TestCase):
         self.assertEqual(new_message.sender, "TestUser1")
         self.assertEqual(new_message.receiver, "TestUser2")
     
+
     def test_error_message_creation(self):
         """Test ErrorMessage class specialized behavior."""
         error_msg = ErrorMessage("User not found", "server")
@@ -75,6 +77,7 @@ class TestMessage(unittest.TestCase):
         self.assertEqual(decoded_json["Message"], "User not found")
         self.assertEqual(decoded_json["Sender"], "server")
         self.assertIsNone(decoded_json["Receiver"])
+    
     
     def test_json_decode_error_handling(self):
         """Test message decoding with invalid JSON input."""

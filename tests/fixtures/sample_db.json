@@ -1,0 +1,33 @@
+{
+    "users": [
+        {
+            "Username": "testUser1",
+            "Password": "testPassword1",
+            "Account type": "admin",
+            "Inbox": [
+                {
+                    "Sender": "Jan",
+                    "Message": "Hello"
+                }
+            ]
+        },
+        {
+            "Username": "testUser2",
+            "Password": "testUser2",
+            "Account type": "user",
+            "Inbox": []
+        },
+        {
+            "Username": "",
+            "Password": "testUser3",
+            "Account type": "user",
+            "Inbox": []
+        },
+        {
+            "Username": "testUser4",
+            "Password": "testUser4",
+            "Account type": "user",
+            "Inbox": []
+        }
+    ]
+}

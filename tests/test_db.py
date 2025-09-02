@@ -3,42 +3,74 @@
 import unittest
 from db import Database, DbHelper
 from config import config
+import os
+import json
 
 class TestDatabase(unittest.TestCase):
     """ Test suite for Database class """
 
-    def SetUp(self):
-        """Setting up for testing Database methods"""
-        
-
-        pass
+    def setUp(self):
+        """Setting up for testing Database methods"""      
+        self.fixtures_path = config.tests.FIXTURES_PATH
+        if os.path.exists(Database.DB_FILE):
+            os.remove(Database.DB_FILE)
 
     
     def test_database_initialization(self):
         """Testing if Database class creates an empty JSON database if it doesn't exist.
         Testing if Database handles connecting to the existing database correctly"""
-
-
-        pass
+        
+        # Test database creation if file doesn't exist
+        # if os.path.exists(Database.DB_FILE):
+        #     os.remove(Database.DB_FILE)
+            
+        db = Database()
+        
+        # Check that the file was created
+        self.assertTrue(os.path.exists(Database.DB_FILE))
+        
+        with open(Database.DB_FILE, 'r') as file:
+            data = json.load(file)
+            self.assertIn('users', data)
+            self.assertEqual(len(data['users']), 0)
 
 
     def test_adding_user_to_db(self):
         """Testing adding new users with different account types to database. """
+        # if os.path.exists(Database.DB_FILE):
+        #     os.remove(Database.DB_FILE)
 
+        db = Database()
+        existing_db = db.open_db()
 
-        pass
+        self.assertEqual(len(existing_db['users']), 0)
 
+        db.add_user_to_db("TestUser1", "TestPassword1", "admin")
+        db.add_user_to_db("TestUser2", "TestPassword2", "user")
+
+        existing_db = db.open_db()
+        
+        self.assertEqual(len(existing_db['users']), 2)
+        self.assertEqual(existing_db['users'][0]["Account type"], "admin")
+        self.assertEqual(existing_db['users'][1]["Account type"], "user")
+
+        os.remove(Database.DB_FILE)
+        
 
     def test_check_user_in_db(self):
         """Test user existence checking with valid usernames, non-existent users, and edge cases like empty strings. """
 
+        db = Database()
+        db.DB_FILE = os.path.join(self.fixtures_path, 'sample_db.json')
 
-        pass
+        self.assertTrue(db.check_user_in_db("testUser1"))
+        self.assertTrue(db.check_user_in_db(""))
+        self.assertFalse(db.check_user_in_db("nonExistingUser"))
 
 
     def test_get_user_password(self):
         """Testing retrieval of user passwords for existing users and handling non-existent users. """
-
+        
 
         pass
 
