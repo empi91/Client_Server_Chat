@@ -15,32 +15,32 @@ class TestConnection(unittest.TestCase):
         pass
 
 
-    def test_sockeet_creation(self):
-        """Test successful socket creation for both client and server modes with proper socket options."""
+    # def test_sockeet_creation(self):
+    #     """Test successful socket creation for both client and server modes with proper socket options."""
 
 
-        pass
+    #     pass
 
 
-    def test_socket_creation_failure(self):
-        """ Test error handling when socket creation fails due to system limitations or permissions."""
+    # def test_socket_creation_failure(self):
+    #     """ Test error handling when socket creation fails due to system limitations or permissions."""
 
 
-        pass
+    #     pass
 
 
-    def test_server_socket_reuse(self):
-        """Test that SO_REUSEADDR is properly set for server sockets to allow quick restart."""
+    # def test_server_socket_reuse(self):
+    #     """Test that SO_REUSEADDR is properly set for server sockets to allow quick restart."""
 
 
-        pass
+    #     pass
 
 
-    def test_connection_context_management(self):
-        """Test that sockets are properly closed when using the connection as a context manager."""
+    # def test_connection_context_management(self):
+    #     """Test that sockets are properly closed when using the connection as a context manager."""
 
 
-        pass
+    #     pass
 
 
 if __name__ == '__main__':

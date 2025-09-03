@@ -13,45 +13,45 @@ class TestServer(unittest.TestCase):
         
         pass
 
-    def test_server_initialization(self):
-        """Test proper initialization of the server"""
+    # def test_server_initialization(self):
+    #     """Test proper initialization of the server"""
         
-        pass
+    #     pass
 
-    def test_server_start(self):
-        """Test starting the server"""
+    # def test_server_start(self):
+    #     """Test starting the server"""
         
-        pass
+    #     pass
 
-    def test_message_handling(self):
-        """Test that different message headers are routed to correct handler methods."""
+    # def test_message_handling(self):
+    #     """Test that different message headers are routed to correct handler methods."""
 
-        pass
+    #     pass
 
-    def test_command_handling(self):
-        """ Test all server commands (help, uptime, info, inbox, stop) return correct responses."""
+    # def test_command_handling(self):
+    #     """ Test all server commands (help, uptime, info, inbox, stop) return correct responses."""
 
-        pass
+    #     pass
 
-    def test_uptime_calc(self):
-        """Test uptime calculation accuracy and proper formatting of time components."""
+    # def test_uptime_calc(self):
+    #     """Test uptime calculation accuracy and proper formatting of time components."""
 
-        pass
+    #     pass
 
-    def test_authentication_flow(self):
-        """Test complete authentication workflow for both existing and new users."""
+    # def test_authentication_flow(self):
+    #     """Test complete authentication workflow for both existing and new users."""
 
-        pass
+    #     pass
 
-    def test_message_sending_validation(self):
-        """Test message sending with various scenarios including valid and invalid recipients and empty/full inboxes."""
+    # def test_message_sending_validation(self):
+    #     """Test message sending with various scenarios including valid and invalid recipients and empty/full inboxes."""
 
-        pass
+    #     pass
 
-    def test_error_message_handling(self):
-        """Test that invalid message headers and malformed requests generate proper error responses."""
+    # def test_error_message_handling(self):
+    #     """Test that invalid message headers and malformed requests generate proper error responses."""
 
-        pass
+    #     pass
 
 
 class TestUserAuthenticator(unittest.TestCase):
@@ -62,25 +62,25 @@ class TestUserAuthenticator(unittest.TestCase):
 
         pass
 
-    def test_user_registration(self):
-        """Test user registration process including various account types"""
+    # def test_user_registration(self):
+    #     """Test user registration process including various account types"""
 
-        pass
+    #     pass
 
-    def test_user_login(self):
-        """Test user login process with valid and invalid credentials."""
+    # def test_user_login(self):
+    #     """Test user login process with valid and invalid credentials."""
 
-        pass
+    #     pass
 
-    def test_password_hashing(self):
-        """Test if password hashing is working correctly"""
+    # def test_password_hashing(self):
+    #     """Test if password hashing is working correctly"""
 
-        pass
+    #     pass
 
-    def test_auth_edge_cases(self):
-        """Test authentication with empty passwords, very long passwords, and special characters."""
+    # def test_auth_edge_cases(self):
+    #     """Test authentication with empty passwords, very long passwords, and special characters."""
 
-        pass
+    #     pass
 
 
 

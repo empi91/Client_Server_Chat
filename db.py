@@ -102,18 +102,17 @@ class Database:
         Returns:
             True if modification was successful, False otherwise.
         """
-        try:
-            existing_db = self.open_db()
+        existing_db = self.open_db()
 
-            for user in existing_db["users"]:
-                if user["Username"] == username:
-                    user[field] = value
+        for user in existing_db["users"]:
+            if user["Username"] == username:
+                if field not in user:
+                    raise KeyError(f"KeyError: '{field}' not found in user data.")
+                user[field] = value
 
-            self.dump_db(existing_db)
-            return True
-        except KeyError:
-            print(f"KeyError: {field} not found in user data.")
-            return False
+                self.dump_db(existing_db)
+                return True
+        raise KeyError(f"KeyError: User '{username}' not found in database.")
 
 
     def add_msg_to_db(self, username, sender, message) -> bool:

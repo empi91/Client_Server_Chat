@@ -17,42 +17,42 @@ class TestClient(unittest.TestCase):
         
         pass
 
-    def test_client_command_handling(self):
-        """Test that user input commands are correctly parsed into appropriate Message objects."""
+    # def test_client_command_handling(self):
+    #     """Test that user input commands are correctly parsed into appropriate Message objects."""
        
        
-        pass
+    #     pass
 
-    def test_input_validation(self):
-        """ Test client-side validation for message length, username length, and password requirements."""
+    # def test_input_validation(self):
+    #     """ Test client-side validation for message length, username length, and password requirements."""
         
         
-        pass
+    #     pass
 
 
-    def test_error_message_creation(self):
-        """Test that invalid commands generate proper ErrorMessage objects instead of sending invalid requests."""
+    # def test_error_message_creation(self):
+    #     """Test that invalid commands generate proper ErrorMessage objects instead of sending invalid requests."""
 
-        pass
+    #     pass
 
 
-    def test_account_type_selection(self):
-        """Test that users can select between different account types (e.g., user, admin) during registration."""
+    # def test_account_type_selection(self):
+    #     """Test that users can select between different account types (e.g., user, admin) during registration."""
         
-        pass
+    #     pass
 
 
-    def test_client_response_handling(self):
-        """Test that different server response types are properly displayed to the user."""
+    # def test_client_response_handling(self):
+    #     """Test that different server response types are properly displayed to the user."""
 
-        pass
+    #     pass
 
     
-    def test_authentication_process(self):
-        """Check if registration/authentication process is working correctly from the client perspective, including wrong credentials, wrong account type, empty strings etc"""
+    # def test_authentication_process(self):
+    #     """Check if registration/authentication process is working correctly from the client perspective, including wrong credentials, wrong account type, empty strings etc"""
 
 
-        pass
+    #     pass
 
 
 if __name__ == "__main__":

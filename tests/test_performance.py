@@ -10,25 +10,25 @@ class TestPerformance(unittest.TestCase):
         # Setup code to initialize server and client instances
         pass
 
-    def test_large_message_handling(self):
-        """Test the performance of sending large messages from client to server."""
+    # def test_large_message_handling(self):
+    #     """Test the performance of sending large messages from client to server."""
 
-        pass
+    #     pass
 
-    def test_database_query_performance(self):
-        """Test database operations with large numbers of users and messages."""
+    # def test_database_query_performance(self):
+    #     """Test database operations with large numbers of users and messages."""
 
-        pass
+    #     pass
 
-    def test_server_response_time(self):
-        """Test the time taken by the server to respond to client requests."""
+    # def test_server_response_time(self):
+    #     """Test the time taken by the server to respond to client requests."""
 
-        pass
+    #     pass
 
-    def test_resource_usage(self):
-        """Test the resource usage (CPU, memory) of the client and server during operation."""
+    # def test_resource_usage(self):
+    #     """Test the resource usage (CPU, memory) of the client and server during operation."""
 
-        pass
+    #     pass
 
 
 if __name__ == "__main__":
