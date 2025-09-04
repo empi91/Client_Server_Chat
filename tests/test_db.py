@@ -13,10 +13,11 @@ class TestDatabase(unittest.TestCase):
     def setUp(self):
         """Setting up for testing Database methods"""      
         self.fixtures_path = config.tests.FIXTURES_PATH
-
         self.original_db_path = Database.DB_FILE
+
+        # fixture_name = getattr(self, 'fixture_file', "test_db.json")
         self.test_db_file = os.path.join(self.fixtures_path, "test_db.json")
-        self.temp_db_file = os.path.join(self.fixtures_path, "temp_test_db.json")
+        self.temp_db_file = os.path.join(self.fixtures_path, f"temp_test_db.json")
 
         if os.path.exists(self.test_db_file):
             shutil.copy(self.test_db_file, self.temp_db_file)
@@ -48,25 +49,26 @@ class TestDatabase(unittest.TestCase):
         with open(Database.DB_FILE, 'r') as file:
             data = json.load(file)
             self.assertIn('users', data)
-            self.assertEqual(len(data['users']), 4)
+            self.assertEqual(len(data['users']), 0)
 
 
     def test_adding_user_to_db(self):
         """Testing adding new users with different account types to database. """
-        # if os.path.exists(Database.DB_FILE):
-        #     os.remove(Database.DB_FILE)
+        # Removing existing DB to make sure new empty one is created
+        if os.path.exists(Database.DB_FILE):
+            os.remove(Database.DB_FILE)
 
         db = Database()
         existing_db = db.open_db()
 
-        self.assertEqual(len(existing_db['users']), 4)
+        self.assertEqual(len(existing_db['users']), 0)
 
         db.add_user_to_db("TestUser6", "TestPassword1", "admin")
         db.add_user_to_db("TestUser7", "TestPassword2", "user")
 
         existing_db = db.open_db()
         
-        self.assertEqual(len(existing_db['users']), 6)
+        self.assertEqual(len(existing_db['users']), 2)
         self.assertEqual(existing_db['users'][0]["Account type"], "admin")
         self.assertEqual(existing_db['users'][1]["Account type"], "user")
 
@@ -77,7 +79,6 @@ class TestDatabase(unittest.TestCase):
         """Test user existence checking with valid usernames, non-existent users, and edge cases like empty strings. """
 
         db = Database()
-        # db.DB_FILE = os.path.join(self.fixtures_path, 'sample_db.json')
 
         self.assertTrue(db.check_user_in_db("testUser1"))
         self.assertTrue(db.check_user_in_db(""))
@@ -87,7 +88,6 @@ class TestDatabase(unittest.TestCase):
     def test_get_user_password(self):
         """Testing retrieval of user passwords for existing users and non-existent users. """
         db = Database()
-        # db.DB_FILE = os.path.join(self.fixtures_path, 'sample_db.json')
 
         self.assertEqual(db.get_user_password("testUser1"), "testPassword1")
         self.assertFalse(db.get_user_password("nonExistingUser"), "testPassword1")
@@ -99,7 +99,6 @@ class TestDatabase(unittest.TestCase):
         Testing modifying user data with invalid operations like non-existent users or non-existin fields.
         """
         db = Database()
-        # db.DB_FILE = os.path.join(self.fixtures_path, 'sample_db.json')
 
         # Valid operations
         existing_db = db.open_db()
@@ -110,8 +109,6 @@ class TestDatabase(unittest.TestCase):
         existing_db = db.open_db()
         self.assertEqual(existing_db["users"][0]["Account type"], "user")
 
-        # self.assertTrue(db.modify_db("testUser1", "Account type", "admin"))
-
         # Invalid operations
         with self.assertRaises(KeyError):
             db.modify_db("testUser1", "Non Existing Field", "admin")
@@ -120,11 +117,11 @@ class TestDatabase(unittest.TestCase):
             db.modify_db("Non Existing User", "Account type", "admin")
 
 
-    def test_inbox_operations(self):
-        """ Test adding messages, reading messages, checking inbox size, and FIFO message ordering. """
-        db = Database
+    # def test_inbox_operations(self):
+    #     """ Test adding messages, reading messages, checking inbox size, and FIFO message ordering. """
+    #     db = Database
         
-        pass
+    #     pass
 
 
 

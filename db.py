@@ -19,7 +19,7 @@ class Database:
 
     def __init__(self):
         """Initialize database and create empty database file if it doesn't exist."""
-        if not os.path.exists("db.json"):
+        if not os.path.exists(self.DB_FILE):
             print("DB not exsiting, creating new")
             empty_data = {"users": []}
             with open(self.DB_FILE, "w") as db:
