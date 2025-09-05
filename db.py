@@ -136,6 +136,8 @@ class Database:
 
             for user in existing_db["users"]:
                 if user["Username"] == username:
+                    if self.check_user_inbox(username) == 5:
+                        raise OverflowError(f"Inbox for user '{username}' is full")
                     user["Inbox"].append(message)
 
             self.dump_db(existing_db)

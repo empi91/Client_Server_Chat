@@ -4,12 +4,7 @@
             "Username": "testUser1",
             "Password": "testPassword1",
             "Account type": "admin",
-            "Inbox": [
-                {
-                    "Sender": "Jan",
-                    "Message": "Hello"
-                }
-            ]
+            "Inbox": []
         },
         {
             "Username": "testUser2",
