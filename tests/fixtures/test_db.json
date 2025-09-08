@@ -8,19 +8,25 @@
         },
         {
             "Username": "testUser2",
-            "Password": "testUser2",
+            "Password": "testPassword2",
             "Account type": "user",
             "Inbox": []
         },
         {
-            "Username": "",
-            "Password": "testUser3",
+            "Username": "testUser3",
+            "Password": "testPassword3",
             "Account type": "user",
             "Inbox": []
         },
         {
             "Username": "testUser4",
-            "Password": "testUser4",
+            "Password": "testPassword4",
+            "Account type": "user",
+            "Inbox": []
+        },
+        {
+      	  "Username": "",
+            "Password": "testUser5",
             "Account type": "user",
             "Inbox": []
         }

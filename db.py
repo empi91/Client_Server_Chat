@@ -126,25 +126,22 @@ class Database:
         Returns:
             True if message was successfully added, False otherwise.
         """
-        try:
-            existing_db = self.open_db()
+        existing_db = self.open_db()
 
-            message = {
-                "Sender": sender,
-                "Message": message,
-            }
+        message = {
+            "Sender": sender,
+            "Message": message,
+        }
 
-            for user in existing_db["users"]:
-                if user["Username"] == username:
-                    if self.check_user_inbox(username) == 5:
-                        raise OverflowError(f"Inbox for user '{username}' is full")
-                    user["Inbox"].append(message)
-
-            self.dump_db(existing_db)
-            return True
-        except KeyError:
-            print(f"KeyError: {username} not found in user data.")
-            return False
+        for user in existing_db["users"]:
+            if user["Username"] == username:
+                if self.check_user_inbox(username) == 5:
+                    raise OverflowError(f"Inbox for user '{username}' is full")
+                user["Inbox"].append(message)
+                self.dump_db(existing_db)
+                return True
+        return False
+        raise KeyError(f"{username} not found in user data.")
 
 
     def read_msg_from_inbox(self, username) -> tuple[str, str]:
@@ -183,6 +180,7 @@ class Database:
         for user in existing_db["users"]:
             if user["Username"] == username:
                 return len(user["Inbox"])
+        raise KeyError(f"User {username} does not exist")
         
 
     def open_db(self):

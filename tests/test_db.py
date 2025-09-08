@@ -325,7 +325,7 @@ class TestDbHelper(unittest.TestCase):
         
         self.db_helper.db.add_msg_to_db(direct_recipient, "sender", test_message)
         self.db_helper.add_msg_to_db(helper_recipient, "sender", test_message)
-        
+
         # Verify both messages were added correctly
         db_sender, db_message = self.db_helper.db.read_msg_from_inbox(direct_recipient)
         helper_sender, helper_message = self.db_helper.get_msg_from_inbox(helper_recipient)
