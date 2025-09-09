@@ -44,7 +44,7 @@ class Client:
             while True:
                 command = input(f"{self.name}>: ")
 
-                sender_message = self.check_input_command(command, connection)
+                sender_message = self.check_input_command(command)
                 if isinstance(sender_message, ErrorMessage):
                     print("[Error] " + sender_message.text)
                     continue
@@ -59,7 +59,7 @@ class Client:
                 self.check_return_msg(received_message)
 
 
-    def check_input_command(self, command: str, connection: Connection) -> Message | ErrorMessage:
+    def check_input_command(self, command: str) -> Message | ErrorMessage:
         """Process user input commands and create appropriate messages.
         
         Args:
