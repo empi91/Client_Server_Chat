@@ -36,6 +36,21 @@ class Connection:
             return self.socket
         except socket.error as s:
             print(f"[SOCKET ERROR]: {s}")
+            return None
+            
+    def close(self):
+        """Close the socket connection if it exists."""
+        if self.socket:
+            self.socket.close()
+            self.socket = None
+            
+    def __enter__(self):
+        """Enter context manager method for use with 'with' statement."""
+        return self
+        
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit context manager method that ensures socket is closed."""
+        self.close()
 
 
 
