@@ -6,6 +6,7 @@ database system. It handles user authentication, message storage, and data persi
 
 import json 
 import os 
+import psycopg2
 from config import config
 
 class Database:
@@ -16,14 +17,21 @@ class Database:
     """
     
     DB_FILE = config.database.DB_FILE
+    DB_USER = config.database.DB_USER
+    DB_PASSWORD = config.database.DB_PASSWORD
+    DB_PORT = config.database.DB_PORT
 
     def __init__(self):
-        """Initialize database and create empty database file if it doesn't exist."""
-        if not os.path.exists(self.DB_FILE):
-            print("DB not exsiting, creating new")
-            empty_data = {"users": []}
-            with open(self.DB_FILE, "w") as db:
-                json.dump(empty_data, db, indent=4)
+        # """Initialize database and create empty database file if it doesn't exist."""
+        # if not os.path.exists(self.DB_FILE):
+        #     print("DB not exsiting, creating new")
+        #     empty_data = {"users": []}
+        #     with open(self.DB_FILE, "w") as db:
+        #         json.dump(empty_data, db, indent=4)
+        """Connect to exisitng PostgreSQL database od create new one"""
+        self.conn = psycopg2.connect(host="loaclhost", dbname = self.DB_FILE, user=self.DB_USER, password=self.DB_PASSWORD, port=self.DB_PORT)
+        self.cur = self.conn.cursor()
+
       
 
     def check_user_in_db(self, username: str) -> bool:

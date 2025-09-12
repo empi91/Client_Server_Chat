@@ -24,6 +24,9 @@ class NetworkConfig:
 class DatabaseConfig:
     """Database configuration settings."""
     DB_FILE: str = "db.json"
+    DB_USER: str = "postrges"
+    DB_PASSWORD: str = "1234"
+    DB_PORT: int = 5432
     MAX_INBOX_SIZE: int = 5
 
 
