@@ -28,10 +28,20 @@ class Database:
         #     empty_data = {"users": []}
         #     with open(self.DB_FILE, "w") as db:
         #         json.dump(empty_data, db, indent=4)
-        """Connect to exisitng PostgreSQL database od create new one"""
-        self.conn = psycopg2.connect(host="loaclhost", dbname = self.DB_FILE, user=self.DB_USER, password=self.DB_PASSWORD, port=self.DB_PORT)
+        """Connect to exisitng PostgreSQL database or create new one"""
+        # Connecting to existing DB
+        #TODO   Add check if DB exists
+        #TODO   Add creating new DB in case there isn't any
+        self.conn = psycopg2.connect(host="localhost", dbname = self.DB_FILE, user=self.DB_USER, password=self.DB_PASSWORD, port=self.DB_PORT)
         self.cur = self.conn.cursor()
+        self.cur.execute("SELECT version()")
+        print(self.cur.fetchone())
 
+
+    def create_db_tables(self):
+        
+
+        pass
       
 
     def check_user_in_db(self, username: str) -> bool:
