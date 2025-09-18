@@ -28,20 +28,45 @@ class Database:
         #     empty_data = {"users": []}
         #     with open(self.DB_FILE, "w") as db:
         #         json.dump(empty_data, db, indent=4)
+
         """Connect to exisitng PostgreSQL database or create new one"""
         # Connecting to existing DB
         #TODO   Add check if DB exists
         #TODO   Add creating new DB in case there isn't any
         self.conn = psycopg2.connect(host="localhost", dbname = self.DB_FILE, user=self.DB_USER, password=self.DB_PASSWORD, port=self.DB_PORT)
-        self.cur = self.conn.cursor()
-        self.cur.execute("SELECT version()")
-        print(self.cur.fetchone())
+        self.cursor = self.conn.cursor()
+        self.cursor.execute("SELECT version()")
+        print(self.cursor.fetchone())
+        self.create_db_tables()
 
 
     def create_db_tables(self):
-        
+        create_user_table = '''CREATE TABLE IF NOT EXISTS users(
+        id SERIAL PRIMARY KEY,
+        username     TEXT            NOT NULL UNIQUE,
+        password     TEXT            NOT NULL,
+        account_type TEXT 
+        );
+        CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+        '''
 
-        pass
+        create_message_table = '''CREATE TABLE IF NOT EXISTS messages(
+        id SERIAL   PRIMARY KEY,
+        sender_id   INTEGER         NOT NULL REFERENCES users(id),
+        receiver_id INTEGER         NOT NULL REFERENCES users(id),
+        timestamp   TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        content     TEXT            NOT NULL,
+        CONSTRAINT fk_sender FOREIGN KEY (sender_id) REFERENCES users(id),
+        CONSTRAINT fk_receiver FOREIGN KEY (receiver_id) REFERENCES users(id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id);
+        '''
+
+        db_connection, db_cursor = self.open_db()
+        db_cursor.execute(create_user_table)
+        db_cursor.execute(create_message_table)
+        db_connection.commit()
+        self.close_db(db_connection, db_cursor)
       
 
     def check_user_in_db(self, username: str) -> bool:
@@ -53,11 +78,21 @@ class Database:
         Returns:
             True if user exists, False otherwise.
         """
-        existing_db = self.open_db()
+        # existing_db = self.open_db()
 
-        for user in existing_db["users"]:
-            if user["Username"] == username:
-                return True
+        # for user in existing_db["users"]:
+        #     if user["Username"] == username:
+        #         return True
+        # return False
+        check_user_query = '''SELECT username FROM users WHERE username = %s'''
+        check_user_values = (username)
+        db_connection, db_cursor = self.open_db()
+        db_cursor.execute(check_user_query, check_user_values)
+        db_connection.commit()
+        if db_cursor.fetchone == username:
+            self.close_db(db_connection, db_cursor)
+            return True
+        self.close_db(db_connection, db_cursor)
         return False
  
  
@@ -89,18 +124,24 @@ class Database:
         Returns:
             True if user was successfully added.
         """
-        new_user = {
-            "Username": login,
-            "Password": password,
-            "Account type": type,
-            "Inbox": [],
-        }
+        # new_user = {
+        #     "Username": login,
+        #     "Password": password,
+        #     "Account type": type,
+        #     "Inbox": [],
+        # }
 
-        existing_db = self.open_db()
-        existing_db["users"].append(new_user)
-        self.dump_db(existing_db)
+        # existing_db = self.open_db()
+        # existing_db["users"].append(new_user)
+        # self.dump_db(existing_db)
 
-        return True
+        # return True
+        add_user_query = '''INSERT INTO users (username, password, account_type) VALUES (%s,%s,%s)'''
+        add_user_values = (login, password, "user")
+        db_connection, db_cursor = self.open_db()
+        db_cursor.execute(add_user_query, add_user_values)
+        db_connection.commit()
+        self.close_db(db_connection, db_cursor)
 
 
     def remove_user_from_db(self):
@@ -207,9 +248,14 @@ class Database:
         Returns:
             The loaded database dictionary.
         """
-        with open(self.DB_FILE, "r") as db:
-            opened_db = json.load(db)
-        return opened_db
+        # with open(self.DB_FILE, "r") as db:
+        #     opened_db = json.load(db)
+        # return opened_db
+
+        db_connection = psycopg2.connect(host="localhost", dbname = self.DB_FILE, user=self.DB_USER, password=self.DB_PASSWORD, port=self.DB_PORT)
+        db_cursor = db_connection.cursor()
+        print("PostgreSQL connection open.")
+        return db_connection, db_cursor
 
 
     def dump_db(self, existing_db):
@@ -220,6 +266,13 @@ class Database:
         """
         with open(self.DB_FILE, "w") as db:
             json.dump(existing_db, db, indent=4)
+
+
+    def close_db(self, connection, cursor):
+        if connection:
+            cursor.close()
+            connection.close()
+            print("PostgreSQL connection closed.")
             
             
             
