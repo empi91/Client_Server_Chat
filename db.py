@@ -90,7 +90,7 @@ class Database:
         db_connection, db_cursor = self.open_db()
         db_cursor.execute(check_user_query, (check_user_values,))
         db_connection.commit()
-        if db_cursor.fetchone == username:
+        if db_cursor.fetchone() == username:
             self.close_db(db_connection, db_cursor)
             return True
         self.close_db(db_connection, db_cursor)
