@@ -23,7 +23,7 @@ class NetworkConfig:
 @dataclass(frozen=True)
 class DatabaseConfig:
     """Database configuration settings."""
-    DB_FILE: str = "postgres"
+    DB_FILE: str = "cs_db"
     DB_USER: str = "postgres"
     DB_PASSWORD: str = "postgres"
     DB_PORT: int = 5432

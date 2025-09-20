@@ -22,22 +22,28 @@ class Database:
     DB_PORT = config.database.DB_PORT
 
     def __init__(self):
-        # """Initialize database and create empty database file if it doesn't exist."""
-        # if not os.path.exists(self.DB_FILE):
-        #     print("DB not exsiting, creating new")
-        #     empty_data = {"users": []}
-        #     with open(self.DB_FILE, "w") as db:
-        #         json.dump(empty_data, db, indent=4)
-
         """Connect to exisitng PostgreSQL database or create new one"""
         # Connecting to existing DB
-        #TODO   Add check if DB exists
-        #TODO   Add creating new DB in case there isn't any
-        self.conn = psycopg2.connect(host="localhost", dbname = self.DB_FILE, user=self.DB_USER, password=self.DB_PASSWORD, port=self.DB_PORT)
-        self.cursor = self.conn.cursor()
-        self.cursor.execute("SELECT version()")
-        print(self.cursor.fetchone())
+        self.initialize_db()
         self.create_db_tables()
+
+
+    def initialize_db(self):
+        try:
+            conn = psycopg2.connect(host="localhost", dbname = "postgres", user=self.DB_USER, password=self.DB_PASSWORD, port=self.DB_PORT)
+            conn.autocommit = True
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM pg_database WHERE datname=%s", (self.DB_FILE,))
+            db_exists = cursor.fetchone()
+
+            if not db_exists:
+                cursor.execute(f"CREATE DATABASE {self.DB_FILE}")
+                print(f"New database {self.DB_FILE} created")
+        except Exception as e: 
+            print(f"Error initializing databse: {e}")
+        finally:
+            if conn:
+                conn.close
 
 
     def create_db_tables(self):
@@ -78,16 +84,11 @@ class Database:
         Returns:
             True if user exists, False otherwise.
         """
-        # existing_db = self.open_db()
 
-        # for user in existing_db["users"]:
-        #     if user["Username"] == username:
-        #         return True
-        # return False
         check_user_query = '''SELECT username FROM users WHERE username = %s'''
-        check_user_values = (username)
+        check_user_values = (username,)
         db_connection, db_cursor = self.open_db()
-        db_cursor.execute(check_user_query, check_user_values)
+        db_cursor.execute(check_user_query, (check_user_values,))
         db_connection.commit()
         if db_cursor.fetchone == username:
             self.close_db(db_connection, db_cursor)
@@ -105,12 +106,17 @@ class Database:
         Returns:
             The stored password hash for the user.
         """
-        existing_db = self.open_db()
+        # existing_db = self.open_db()
 
-        for user in existing_db["users"]:
-            if user["Username"] == username:
-                return user["Password"]
-        return False
+        # for user in existing_db["users"]:
+        #     if user["Username"] == username:
+        #         return user["Password"]
+        # return False
+        get_password_query = """SELECT password FROM users WHERE username = %s"""
+        db_connection, db_cursor = self.open_db()
+        db_cursor.execute(get_password_query, username)
+        db_connection.commit()
+        return db_cursor.fetchone()
    
     
     def add_user_to_db(self, login, password, type=None):
@@ -137,9 +143,8 @@ class Database:
 
         # return True
         add_user_query = '''INSERT INTO users (username, password, account_type) VALUES (%s,%s,%s)'''
-        add_user_values = (login, password, "user")
         db_connection, db_cursor = self.open_db()
-        db_cursor.execute(add_user_query, add_user_values)
+        db_cursor.execute(add_user_query, (login, password, "user",))
         db_connection.commit()
         self.close_db(db_connection, db_cursor)
 
@@ -161,17 +166,23 @@ class Database:
         Returns:
             True if modification was successful, False otherwise.
         """
-        existing_db = self.open_db()
+        # existing_db = self.open_db()
 
-        for user in existing_db["users"]:
-            if user["Username"] == username:
-                if field not in user:
-                    raise KeyError(f"KeyError: '{field}' not found in user data.")
-                user[field] = value
+        # for user in existing_db["users"]:
+        #     if user["Username"] == username:
+        #         if field not in user:
+        #             raise KeyError(f"KeyError: '{field}' not found in user data.")
+        #         user[field] = value
 
-                self.dump_db(existing_db)
-                return True
-        raise KeyError(f"KeyError: User '{username}' not found in database.")
+        #         self.dump_db(existing_db)
+        #         return True
+        # raise KeyError(f"KeyError: User '{username}' not found in database.")
+        update_data_query = f"""UPDATE users SET {field} = %s WHERE username = %s"""
+        db_connection, db_cursor = self.open_db()
+        db_cursor.execute(update_data_query, (value, username,))
+        db_connection.commit()
+        self.close_db(db_connection, db_cursor)
+        return True
 
 
     def add_msg_to_db(self, username, sender, message) -> bool:
@@ -248,10 +259,6 @@ class Database:
         Returns:
             The loaded database dictionary.
         """
-        # with open(self.DB_FILE, "r") as db:
-        #     opened_db = json.load(db)
-        # return opened_db
-
         db_connection = psycopg2.connect(host="localhost", dbname = self.DB_FILE, user=self.DB_USER, password=self.DB_PASSWORD, port=self.DB_PORT)
         db_cursor = db_connection.cursor()
         print("PostgreSQL connection open.")
@@ -344,7 +351,7 @@ class DbHelper:
         Returns:
             True if account type was successfully updated.
         """
-        return self.db.modify_db(text["login"], "Account type", text["acc_type"])
+        return self.db.modify_db(text["login"], "account_type", text["acc_type"])
 
     
     def add_msg_to_db(self, receiver, sender, message):
