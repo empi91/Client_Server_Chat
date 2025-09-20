@@ -33,7 +33,7 @@ class Database:
             conn = psycopg2.connect(host="localhost", dbname = "postgres", user=self.DB_USER, password=self.DB_PASSWORD, port=self.DB_PORT)
             conn.autocommit = True
             cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM pg_database WHERE datname=%s", (self.DB_FILE,))
+            cursor.execute("SELECT 1 FROM pg_database WHERE datname=%s;", (self.DB_FILE,))
             db_exists = cursor.fetchone()
 
             if not db_exists:
@@ -85,14 +85,16 @@ class Database:
             True if user exists, False otherwise.
         """
 
-        check_user_query = '''SELECT username FROM users WHERE username = %s'''
+        check_user_query = '''SELECT username FROM users WHERE username = %s;'''
         check_user_values = (username,)
         db_connection, db_cursor = self.open_db()
         db_cursor.execute(check_user_query, (check_user_values,))
         db_connection.commit()
-        if db_cursor.fetchone() == username:
-            self.close_db(db_connection, db_cursor)
-            return True
+        exisitng_username = db_cursor.fetchone()
+        if exisitng_username:
+            if exisitng_username[0] == username:
+                self.close_db(db_connection, db_cursor)
+                return True
         self.close_db(db_connection, db_cursor)
         return False
  
@@ -112,11 +114,11 @@ class Database:
         #     if user["Username"] == username:
         #         return user["Password"]
         # return False
-        get_password_query = """SELECT password FROM users WHERE username = %s"""
+        get_password_query = """SELECT password FROM users WHERE username = %s;"""
         db_connection, db_cursor = self.open_db()
-        db_cursor.execute(get_password_query, username)
+        db_cursor.execute(get_password_query, (username,))
         db_connection.commit()
-        return db_cursor.fetchone()
+        return db_cursor.fetchone()[0]
    
     
     def add_user_to_db(self, login, password, type=None):
@@ -142,7 +144,7 @@ class Database:
         # self.dump_db(existing_db)
 
         # return True
-        add_user_query = '''INSERT INTO users (username, password, account_type) VALUES (%s,%s,%s)'''
+        add_user_query = '''INSERT INTO users (username, password, account_type) VALUES (%s,%s,%s);'''
         db_connection, db_cursor = self.open_db()
         db_cursor.execute(add_user_query, (login, password, "user",))
         db_connection.commit()
@@ -177,7 +179,7 @@ class Database:
         #         self.dump_db(existing_db)
         #         return True
         # raise KeyError(f"KeyError: User '{username}' not found in database.")
-        update_data_query = f"""UPDATE users SET {field} = %s WHERE username = %s"""
+        update_data_query = f"""UPDATE users SET {field} = %s WHERE username = %s;"""
         db_connection, db_cursor = self.open_db()
         db_cursor.execute(update_data_query, (value, username,))
         db_connection.commit()
@@ -196,22 +198,33 @@ class Database:
         Returns:
             True if message was successfully added, False otherwise.
         """
-        existing_db = self.open_db()
+        # existing_db = self.open_db()
 
-        message = {
-            "Sender": sender,
-            "Message": message,
-        }
+        # message = {
+        #     "Sender": sender,
+        #     "Message": message,
+        # }
 
-        for user in existing_db["users"]:
-            if user["Username"] == username:
-                if self.check_user_inbox(username) == 5:
-                    raise OverflowError(f"Inbox for user '{username}' is full")
-                user["Inbox"].append(message)
-                self.dump_db(existing_db)
-                return True
-        return False
-        raise KeyError(f"{username} not found in user data.")
+        # for user in existing_db["users"]:
+        #     if user["Username"] == username:
+        #         if self.check_user_inbox(username) == 5:
+        #             raise OverflowError(f"Inbox for user '{username}' is full")
+        #         user["Inbox"].append(message)
+        #         self.dump_db(existing_db)
+        #         return True
+        # return False
+        # raise KeyError(f"{username} not found in user data.")
+        add_msg_query = """INSERT INTO messages (sender_id, receiver_id, content) 
+                            VALUES (
+                            (SELECT id from USERS WHERE username = %s),
+                            (SELECT id from USERS WHERE username = %s),
+                            %s
+                            );"""
+        db_connection, db_cursor = self.open_db()
+        db_cursor.execute(add_msg_query, (sender, username, message,))
+        db_connection.commit()
+        self.close_db(db_connection, db_cursor)
+        return True
 
 
     def read_msg_from_inbox(self, username) -> tuple[str, str]:
@@ -223,17 +236,33 @@ class Database:
         Returns:
             A tuple containing (sender, message) or (username, "EMPTY") if no messages.
         """
-        existing_db = self.open_db()
+        # existing_db = self.open_db()
 
-        for user in existing_db["users"]:
-            if self.check_user_inbox(username) > 0:
-                if user["Username"] == username:
-                    message = user["Inbox"][0]
-                    user["Inbox"].pop(0)
-                    self.dump_db(existing_db)
-                    return message["Sender"], message["Message"]
-            else:
-                return username, "EMPTY"
+        # for user in existing_db["users"]:
+        #     if self.check_user_inbox(username) > 0:
+        #         if user["Username"] == username:
+        #             message = user["Inbox"][0]
+        #             user["Inbox"].pop(0)
+        #             self.dump_db(existing_db)
+        #             return message["Sender"], message["Message"]
+        #     else:
+        #         return username, "EMPTY"
+        read_msg_query = """SELECT sender_id, content, timestamp FROM messages WHERE receiver_id = (SELECT id from users WHERE username = %s);"""
+        db_connection, db_cursor = self.open_db()
+        db_cursor.execute(read_msg_query, (username,))
+        db_connection.commit()
+        raw_messages = db_cursor.fetchall()
+        messages = ()
+        for msg in raw_messages:
+            sender = msg[0]
+            text = msg[1]
+            datetime = msg[2]
+            print(f"Mesage from {sender}: {text}, send on: {datetime}")
+
+
+        print(messages)
+        self.close_db(db_connection, db_cursor)
+        return "Tester", "Test"
 
 
     def check_user_inbox(self, username) -> int:
@@ -245,12 +274,19 @@ class Database:
         Returns:
             The number of messages in the user's inbox.
         """
-        existing_db = self.open_db()
+        # existing_db = self.open_db()
 
-        for user in existing_db["users"]:
-            if user["Username"] == username:
-                return len(user["Inbox"])
-        raise KeyError(f"User {username} does not exist")
+        # for user in existing_db["users"]:
+        #     if user["Username"] == username:
+        #         return len(user["Inbox"])
+        # raise KeyError(f"User {username} does not exist")
+        check_user_inbox_query = """SELECT * FROM messages WHERE receiver_id = (SELECT id from users WHERE username = %s);"""
+        db_connection, db_cursor = self.open_db()
+        db_cursor.execute(check_user_inbox_query, (username,))
+        db_connection.commit()
+        no_of_messages = db_cursor.fetchall()
+        self.close_db(db_connection, db_cursor)
+        return len(no_of_messages)
         
 
     def open_db(self):
