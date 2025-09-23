@@ -248,17 +248,22 @@ class Database:
         #     else:
         #         return username, "EMPTY"
         read_msg_query = """SELECT sender_id, content, timestamp FROM messages WHERE receiver_id = (SELECT id from users WHERE username = %s);"""
+        get_username_query = """SELECT username FROM users WHERE id = %s"""
+        delete_read_msg_query = """SELECT * FROM messages WHERE receiver_id = (SELECT id from users WHERE username = %s);"""
         db_connection, db_cursor = self.open_db()
         db_cursor.execute(read_msg_query, (username,))
         db_connection.commit()
         raw_messages = db_cursor.fetchall()
-        messages = ()
+        messages = []
         for msg in raw_messages:
-            sender = msg[0]
+            db_cursor.execute(get_username_query, (msg[0],))
+            sender = db_cursor.fetchone()
             text = msg[1]
             datetime = msg[2]
-            print(f"Mesage from {sender}: {text}, send on: {datetime}")
-
+            message = (sender, datetime, text)
+            messages.append(message)
+            # print(f"Mesage from {sender[0]}: {text}, send on: {datetime}")
+        print(messages)
 
         print(messages)
         self.close_db(db_connection, db_cursor)
