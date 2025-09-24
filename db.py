@@ -47,31 +47,10 @@ class Database:
 
 
     def create_db_tables(self):
-        create_user_table = '''CREATE TABLE IF NOT EXISTS users(
-        id SERIAL PRIMARY KEY,
-        username     TEXT            NOT NULL UNIQUE,
-        password     TEXT            NOT NULL,
-        account_type TEXT 
-        );
-        CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-        '''
-
-        create_message_table = '''CREATE TABLE IF NOT EXISTS messages(
-        id SERIAL   PRIMARY KEY,
-        sender_id   INTEGER         NOT NULL REFERENCES users(id),
-        receiver_id INTEGER         NOT NULL REFERENCES users(id),
-        timestamp   TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        content     TEXT            NOT NULL,
-        CONSTRAINT fk_sender FOREIGN KEY (sender_id) REFERENCES users(id),
-        CONSTRAINT fk_receiver FOREIGN KEY (receiver_id) REFERENCES users(id)
-        );
-        CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id);
-        '''
-
         try:
             db_connection, db_cursor = self.open_db()
-            db_cursor.execute(create_user_table)
-            db_cursor.execute(create_message_table)
+            db_cursor.execute(config.database.CREATE_USER_TABLE_QUERY)
+            db_cursor.execute(config.database.CREATE_MESSAGE_TABLE_QUERY)
             db_connection.commit()
         except Exception as e: 
             print(f"Error initializing databse: {e}")
@@ -270,6 +249,19 @@ class Database:
             return len(no_of_messages)
         except:
             raise KeyError(f"User {username} does not exist")
+        finally:
+            self.close_db(db_connection, db_cursor)
+
+
+    def check_value(self, query):
+        try:
+            db_connection, db_cursor = self.open_db()
+            db_cursor.execute(query)
+            db_connection.commit()
+            value = db_cursor.fetchall()
+            return value
+        except:
+            raise KeyError(f"Invalid query")
         finally:
             self.close_db(db_connection, db_cursor)
 

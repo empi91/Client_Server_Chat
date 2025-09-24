@@ -28,6 +28,25 @@ class DatabaseConfig:
     DB_PASSWORD: str = "postgres"
     DB_PORT: int = 5432
     MAX_INBOX_SIZE: int = 5
+    CREATE_USER_TABLE_QUERY = '''CREATE TABLE IF NOT EXISTS users(
+        id SERIAL PRIMARY KEY,
+        username     TEXT            NOT NULL UNIQUE,
+        password     TEXT            NOT NULL,
+        account_type TEXT 
+        );
+        CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+        '''
+    CREATE_MESSAGE_TABLE_QUERY = '''CREATE TABLE IF NOT EXISTS messages(
+        id SERIAL   PRIMARY KEY,
+        sender_id   INTEGER         NOT NULL REFERENCES users(id),
+        receiver_id INTEGER         NOT NULL REFERENCES users(id),
+        timestamp   TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        content     TEXT            NOT NULL,
+        CONSTRAINT fk_sender FOREIGN KEY (sender_id) REFERENCES users(id),
+        CONSTRAINT fk_receiver FOREIGN KEY (receiver_id) REFERENCES users(id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id);
+        '''
 
 
 @dataclass(frozen=True)
@@ -76,7 +95,7 @@ class UIConfig:
         "Stop server: Type !stop\n"
         "Need help? Type !help"
     )
-    
+
     # # Error messages
     # INVALID_COMMAND_MSG: str = "Wrong command, try again!"
     # EMPTY_LOGIN_MSG: str = "Empty login, try again."
@@ -94,6 +113,8 @@ class ServerConfig:
 class TestsConfig:
     """Path for fixtures used for testing"""
     FIXTURES_PATH: str = Path(__file__).parent / 'tests' / 'fixtures'
+    TEST_DB_FILE: str = "test_cs_db"
+
 
 # Create a main config object that combines all configurations
 @dataclass(frozen=True)
