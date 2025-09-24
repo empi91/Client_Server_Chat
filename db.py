@@ -68,11 +68,15 @@ class Database:
         CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id);
         '''
 
-        db_connection, db_cursor = self.open_db()
-        db_cursor.execute(create_user_table)
-        db_cursor.execute(create_message_table)
-        db_connection.commit()
-        self.close_db(db_connection, db_cursor)
+        try:
+            db_connection, db_cursor = self.open_db()
+            db_cursor.execute(create_user_table)
+            db_cursor.execute(create_message_table)
+            db_connection.commit()
+        except Exception as e: 
+            print(f"Error initializing databse: {e}")
+        finally:
+            self.close_db(db_connection, db_cursor)
       
 
     def check_user_in_db(self, username: str) -> bool:
@@ -84,19 +88,23 @@ class Database:
         Returns:
             True if user exists, False otherwise.
         """
-
-        check_user_query = '''SELECT username FROM users WHERE username = %s;'''
-        check_user_values = (username,)
-        db_connection, db_cursor = self.open_db()
-        db_cursor.execute(check_user_query, (check_user_values,))
-        db_connection.commit()
-        exisitng_username = db_cursor.fetchone()
-        if exisitng_username:
-            if exisitng_username[0] == username:
-                self.close_db(db_connection, db_cursor)
-                return True
-        self.close_db(db_connection, db_cursor)
-        return False
+        try:
+            check_user_query = '''SELECT username FROM users WHERE username = %s;'''
+            check_user_values = (username,)
+            db_connection, db_cursor = self.open_db()
+            db_cursor.execute(check_user_query, (check_user_values,))
+            db_connection.commit()
+            exisitng_username = db_cursor.fetchone()
+            if exisitng_username:
+                if exisitng_username[0] == username:
+                    self.close_db(db_connection, db_cursor)
+                    return True
+            self.close_db(db_connection, db_cursor)
+            return False
+        except Exception as e: 
+            print(f"Error initializing databse: {e}")
+        finally:
+            self.close_db(db_connection, db_cursor)
  
  
     def get_user_password(self, username: str) -> str:
@@ -108,17 +116,16 @@ class Database:
         Returns:
             The stored password hash for the user.
         """
-        # existing_db = self.open_db()
-
-        # for user in existing_db["users"]:
-        #     if user["Username"] == username:
-        #         return user["Password"]
-        # return False
         get_password_query = """SELECT password FROM users WHERE username = %s;"""
-        db_connection, db_cursor = self.open_db()
-        db_cursor.execute(get_password_query, (username,))
-        db_connection.commit()
-        return db_cursor.fetchone()[0]
+        try:
+            db_connection, db_cursor = self.open_db()
+            db_cursor.execute(get_password_query, (username,))
+            db_connection.commit()
+            return db_cursor.fetchone()[0]
+        except:
+            return False
+        finally:
+            self.close_db(db_connection, db_cursor)
    
     
     def add_user_to_db(self, login, password, type=None):
@@ -132,23 +139,16 @@ class Database:
         Returns:
             True if user was successfully added.
         """
-        # new_user = {
-        #     "Username": login,
-        #     "Password": password,
-        #     "Account type": type,
-        #     "Inbox": [],
-        # }
-
-        # existing_db = self.open_db()
-        # existing_db["users"].append(new_user)
-        # self.dump_db(existing_db)
-
-        # return True
         add_user_query = '''INSERT INTO users (username, password, account_type) VALUES (%s,%s,%s);'''
-        db_connection, db_cursor = self.open_db()
-        db_cursor.execute(add_user_query, (login, password, "user",))
-        db_connection.commit()
-        self.close_db(db_connection, db_cursor)
+        try:
+            db_connection, db_cursor = self.open_db()
+            db_cursor.execute(add_user_query, (login, password, "user",))
+            db_connection.commit()
+            return True
+        except:
+            return False
+        finally:
+            self.close_db(db_connection, db_cursor)
 
 
     def remove_user_from_db(self):
@@ -168,24 +168,17 @@ class Database:
         Returns:
             True if modification was successful, False otherwise.
         """
-        # existing_db = self.open_db()
-
-        # for user in existing_db["users"]:
-        #     if user["Username"] == username:
-        #         if field not in user:
-        #             raise KeyError(f"KeyError: '{field}' not found in user data.")
-        #         user[field] = value
-
-        #         self.dump_db(existing_db)
-        #         return True
-        # raise KeyError(f"KeyError: User '{username}' not found in database.")
         update_data_query = f"""UPDATE users SET {field} = %s WHERE username = %s;"""
-        db_connection, db_cursor = self.open_db()
-        db_cursor.execute(update_data_query, (value, username,))
-        db_connection.commit()
-        self.close_db(db_connection, db_cursor)
-        return True
-
+        try:
+            db_connection, db_cursor = self.open_db()
+            db_cursor.execute(update_data_query, (value, username,))
+            db_connection.commit()
+            return True
+        except:
+            raise KeyError(f"KeyError: User '{username}' not found in database.")
+        finally:
+            self.close_db(db_connection, db_cursor)
+            
 
     def add_msg_to_db(self, username, sender, message) -> bool:
         """Add a message to a user's inbox.
@@ -198,78 +191,67 @@ class Database:
         Returns:
             True if message was successfully added, False otherwise.
         """
-        # existing_db = self.open_db()
-
-        # message = {
-        #     "Sender": sender,
-        #     "Message": message,
-        # }
-
-        # for user in existing_db["users"]:
-        #     if user["Username"] == username:
-        #         if self.check_user_inbox(username) == 5:
-        #             raise OverflowError(f"Inbox for user '{username}' is full")
-        #         user["Inbox"].append(message)
-        #         self.dump_db(existing_db)
-        #         return True
-        # return False
-        # raise KeyError(f"{username} not found in user data.")
         add_msg_query = """INSERT INTO messages (sender_id, receiver_id, content) 
                             VALUES (
                             (SELECT id from USERS WHERE username = %s),
                             (SELECT id from USERS WHERE username = %s),
                             %s
                             );"""
-        db_connection, db_cursor = self.open_db()
-        db_cursor.execute(add_msg_query, (sender, username, message,))
-        db_connection.commit()
-        self.close_db(db_connection, db_cursor)
-        return True
+        try:
+            db_connection, db_cursor = self.open_db()
+            db_cursor.execute(add_msg_query, (sender, username, message,))
+            db_connection.commit()
+            return True
+        except:
+            return False
+        finally:
+            self.close_db(db_connection, db_cursor)
 
 
-    def read_msg_from_inbox(self, username) -> tuple[str, str]:
+    def read_msg_from_inbox(self, username) -> list[str, str]:
         """Read and remove the first message from a user's inbox.
         
         Args:
             username: The username whose inbox to read from.
             
         Returns:
-            A tuple containing (sender, message) or (username, "EMPTY") if no messages.
+            A list containing al messages from inbox (sender, message) or (username, "EMPTY") if no messages.
         """
-        # existing_db = self.open_db()
-
-        # for user in existing_db["users"]:
-        #     if self.check_user_inbox(username) > 0:
-        #         if user["Username"] == username:
-        #             message = user["Inbox"][0]
-        #             user["Inbox"].pop(0)
-        #             self.dump_db(existing_db)
-        #             return message["Sender"], message["Message"]
-        #     else:
-        #         return username, "EMPTY"
         read_msg_query = """SELECT sender_id, content, timestamp FROM messages WHERE receiver_id = (SELECT id from users WHERE username = %s);"""
         get_username_query = """SELECT username FROM users WHERE id = %s"""
-        delete_read_msg_query = """SELECT * FROM messages WHERE receiver_id = (SELECT id from users WHERE username = %s);"""
-        db_connection, db_cursor = self.open_db()
-        db_cursor.execute(read_msg_query, (username,))
-        db_connection.commit()
-        raw_messages = db_cursor.fetchall()
+        delete_read_msg_query = """DELETE FROM messages WHERE receiver_id = (SELECT id from users WHERE username = %s);"""
         messages = []
-        for msg in raw_messages:
-            db_cursor.execute(get_username_query, (msg[0],))
-            sender = db_cursor.fetchone()
-            text = msg[1]
-            datetime = msg[2]
-            message = (sender, datetime, text)
+        try:
+            db_connection, db_cursor = self.open_db()
+            db_cursor.execute(read_msg_query, (username,))
+            db_connection.commit()
+            raw_messages = db_cursor.fetchall()
+            if self.check_user_inbox(username) != 0:
+                for msg in raw_messages:
+                    db_cursor.execute(get_username_query, (msg[0],))
+                    sender = db_cursor.fetchone()
+                    message = {
+                        "Sender": sender[0],
+                        "Text": msg[1],
+                        "Datetime": msg[2],
+                    }
+                    messages.append(message)
+
+                db_cursor.execute(delete_read_msg_query, (username,))
+                db_connection.commit()
+                return messages
+            message = {
+                "Sender": username,
+                "Text": "EMPTY",
+            }
             messages.append(message)
-            # print(f"Mesage from {sender[0]}: {text}, send on: {datetime}")
-        print(messages)
-
-        print(messages)
-        self.close_db(db_connection, db_cursor)
-        return "Tester", "Test"
-
-
+            return messages
+        except Exception as e: 
+            print(f"Error initializing databse: {e}")
+        finally:
+            self.close_db(db_connection, db_cursor)
+    
+ 
     def check_user_inbox(self, username) -> int:
         """Check the number of messages in a user's inbox.
         
@@ -279,20 +261,18 @@ class Database:
         Returns:
             The number of messages in the user's inbox.
         """
-        # existing_db = self.open_db()
-
-        # for user in existing_db["users"]:
-        #     if user["Username"] == username:
-        #         return len(user["Inbox"])
-        # raise KeyError(f"User {username} does not exist")
         check_user_inbox_query = """SELECT * FROM messages WHERE receiver_id = (SELECT id from users WHERE username = %s);"""
-        db_connection, db_cursor = self.open_db()
-        db_cursor.execute(check_user_inbox_query, (username,))
-        db_connection.commit()
-        no_of_messages = db_cursor.fetchall()
-        self.close_db(db_connection, db_cursor)
-        return len(no_of_messages)
-        
+        try:
+            db_connection, db_cursor = self.open_db()
+            db_cursor.execute(check_user_inbox_query, (username,))
+            db_connection.commit()
+            no_of_messages = db_cursor.fetchall()
+            return len(no_of_messages)
+        except:
+            raise KeyError(f"User {username} does not exist")
+        finally:
+            self.close_db(db_connection, db_cursor)
+
 
     def open_db(self):
         """Open and load the database from the JSON file.
@@ -304,16 +284,6 @@ class Database:
         db_cursor = db_connection.cursor()
         print("PostgreSQL connection open.")
         return db_connection, db_cursor
-
-
-    def dump_db(self, existing_db):
-        """Save the database dictionary to the JSON file.
-        
-        Args:
-            existing_db: The database dictionary to save.
-        """
-        with open(self.DB_FILE, "w") as db:
-            json.dump(existing_db, db, indent=4)
 
 
     def close_db(self, connection, cursor):

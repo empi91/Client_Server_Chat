@@ -6,9 +6,11 @@ command processing, and communication with the server.
 
 import sys
 import maskpass     # pip install maskpass
+from datetime import datetime
 from message import Message, ErrorMessage
 from connection import Connection
 from config import config
+
 
 
 class Client:
@@ -112,7 +114,10 @@ class Client:
                 sys.exit()
 
             case "Inbox_message":
-                print(f"Receiver message from {rec_message.text['Sender']}: \n{rec_message.text['Message']}")
+                for message in rec_message.text:
+                    dt_object = datetime.fromisoformat(message["Datetime"])
+                    friendly_datetime = dt_object.strftime("%b %d, %Y at %I:%M %p")
+                    print(f"Message from {message['Sender']} sent at: {friendly_datetime}: \n{message['Text']}")
 
             case "Error":
                 print(f"[ERROR] {rec_message.text}")

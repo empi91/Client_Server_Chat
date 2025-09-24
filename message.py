@@ -5,6 +5,17 @@ decoding, and managing messages exchanged between client and server.
 """
 
 import json
+from datetime import datetime
+
+class DateTimeEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles datetime objects.
+    
+    Converts datetime objects to ISO format strings during JSON serialization.
+    """
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
 
 class Message:
     """Represents a message for client-server communication.
@@ -40,7 +51,7 @@ class Message:
             "Sender": self.sender,
             "Receiver": self.receiver,
         }
-        json_message = json.dumps(text_message).encode("utf-8")
+        json_message = json.dumps(text_message, cls=DateTimeEncoder).encode("utf-8")
         return json_message
 
     def decode_message(self, json_text) -> bool:

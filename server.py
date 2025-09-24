@@ -121,16 +121,13 @@ class Server:
                 return Message("Command", info_dict, self.server_host, message.sender)
 
             case "inbox":
-                message_sender, message_text = self.db_helper.get_msg_from_inbox(message.sender)
+                messages = self.db_helper.get_msg_from_inbox(message.sender)
 
-                if message_text == "EMPTY":
-                    return Message("Error", "Inbox empty", self.server_host, message.sender)
-                else:
-                    inbox = {
-                        "Sender": message_sender,
-                        "Message": message_text, 
-                    }
-                    return Message("Inbox_message", inbox, self.server_host, message.sender)
+                for msg in messages:
+                    if msg["Text"] == "EMPTY":
+                        return Message("Error", "Inbox empty", self.server_host, msg["Sender"])
+                    else:
+                        return Message("Inbox_message", messages, self.server_host, message.sender)
 
             case "stop":
                 return Message("Stop", "Stop", self.server_host, message.sender)
