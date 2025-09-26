@@ -79,9 +79,7 @@ class TestDatabase(unittest.TestCase):
             users = [
                 ("testUser1", "testPassword1", "admin"),
                 ("testUser2", "testPassword2", "user"),
-                ("testUser3", "testPassword3", "user"),
-                ("testUser4", "testPassword4", "user"),
-                ("", "testUser5", "user")
+                ("", "testPassword3", "user")
             ]
             
             for username, password, account_type in users:
@@ -115,8 +113,10 @@ class TestDatabase(unittest.TestCase):
 
     
     def test_database_initialization(self):
-        """Testing if Database class creates an empty JSON database if it doesn't exist.
+        """Testing if Database class creates an empty PostgreSQL database if it doesn't exist.
         Testing if Database handles connecting to the existing database correctly"""
+        #TODO Modify code to assert if SQL DB does or does not exist
+        #TODO Assert if tables are created correctly
         
         # Test database creation if file doesn't exist
         # if os.path.exists(Database.DB_FILE):
@@ -129,14 +129,20 @@ class TestDatabase(unittest.TestCase):
         # Check that the file was created
         self.assertTrue(os.path.exists(Database.DB_FILE))
         
-        with open(Database.DB_FILE, 'r') as file:
-            data = json.load(file)
-            self.assertIn('users', data)
-            self.assertEqual(len(data['users']), 0)
+        # with open(Database.DB_FILE, 'r') as file:
+        #     data = json.load(file)
+        #     self.assertIn('users', data)
+        #     self.assertEqual(len(data['users']), 0)
+
+        
+
 
 
     def test_adding_user_to_db(self):
         """Testing adding new users with different account types to database. """
+        #TODO Add adding default messages to test database
+        #TODO Modify number of testUsers created by default
+
         check_no_of_users_query = """SELECT username FROM users;"""
         check_user_acc_type = """SELECT account_type FROM users WHERE username=%s"""
         db = Database()
@@ -145,8 +151,8 @@ class TestDatabase(unittest.TestCase):
         # self.assertEqual(len(db.check_value(check_no_of_users_query)), 0)
         print(db.check_value(check_no_of_users_query))
 
-        db.add_user_to_db("TestUser6", "TestPassword1", "admin")
-        db.add_user_to_db("TestUser7", "TestPassword2", "user")
+        db.add_user_to_db("TestUser4", "TestPassword4", "admin")
+        db.add_user_to_db("TestUser5", "TestPassword5", "user")
 
         existing_db = db.open_db()
         
@@ -180,16 +186,17 @@ class TestDatabase(unittest.TestCase):
         Testing modifying user data with valid operations like changing account types. 
         Testing modifying user data with invalid operations like non-existent users or non-existin fields.
         """
+        #TODO Modify to properly access existing data from DB
         db = Database()
 
         # Valid operations
         existing_db = db.open_db()
-        self.assertEqual(existing_db["users"][0]["Account type"], "admin")
+        self.assertEqual(existing_db["users"][0]["Account type"], "admin")  # !!!!
 
         self.assertTrue(db.modify_db("testUser1", "Account type", "user"))
 
         existing_db = db.open_db()
-        self.assertEqual(existing_db["users"][0]["Account type"], "user")
+        self.assertEqual(existing_db["users"][0]["Account type"], "user")   # !!!!
 
         # Invalid operations
         with self.assertRaises(KeyError):
@@ -201,6 +208,7 @@ class TestDatabase(unittest.TestCase):
 
     def test_inbox_operations(self):
         """ Test adding messages, reading messages, checking inbox size, and overflowing user inbox. """
+        #TODO Modify test to comply with new rules of retreiving all messages from inbox at once
         db = Database()
         
         # Clear inbox first to ensure a clean state

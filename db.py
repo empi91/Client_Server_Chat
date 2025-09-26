@@ -274,7 +274,7 @@ class Database:
         """
         db_connection = psycopg2.connect(host="localhost", dbname = self.DB_FILE, user=self.DB_USER, password=self.DB_PASSWORD, port=self.DB_PORT)
         db_cursor = db_connection.cursor()
-        print("PostgreSQL connection open.")
+        # print("PostgreSQL connection open.")
         return db_connection, db_cursor
 
 
@@ -282,7 +282,7 @@ class Database:
         if connection:
             cursor.close()
             connection.close()
-            print("PostgreSQL connection closed.")
+            # print("PostgreSQL connection closed.")
             
             
             
