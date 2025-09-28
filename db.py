@@ -50,6 +50,7 @@ class Database:
         try:
             db_connection, db_cursor = self.open_db()
             db_cursor.execute(config.database.CREATE_USER_TABLE_QUERY)
+            db_connection.commit()
             db_cursor.execute(config.database.CREATE_MESSAGE_TABLE_QUERY)
             db_connection.commit()
         except Exception as e: 
@@ -147,14 +148,31 @@ class Database:
         Returns:
             True if modification was successful, False otherwise.
         """
-        update_data_query = f"""UPDATE users SET {field} = %s WHERE username = %s;"""
+        allowed_fields = ['password', 'account_type', 'email']  # Add your valid fields
+        if field not in allowed_fields:
+            raise ValueError(f"Invalid field name: {field}")
+        
+        update_data_query = f"UPDATE users SET {field} = %s WHERE username = %s;"
+
+        
         try:
             db_connection, db_cursor = self.open_db()
-            db_cursor.execute(update_data_query, (value, username,))
+            db_cursor.execute(update_data_query, (value, username))
+            
+            rows_affected = db_cursor.rowcount
+            
+            if rows_affected == 0:
+                db_connection.rollback()
+                raise ValueError(f"User '{username}' not found in database")
+            
             db_connection.commit()
             return True
-        except:
-            raise KeyError(f"KeyError: User '{username}' not found in database.")
+                        
+        except Exception as e:
+            if db_connection:
+                db_connection.rollback()
+            raise Exception(f"Unexpected error during database modification: {e}")
+            
         finally:
             self.close_db(db_connection, db_cursor)
             
@@ -181,8 +199,11 @@ class Database:
             db_cursor.execute(add_msg_query, (sender, username, message,))
             db_connection.commit()
             return True
-        except:
-            return False
+        except Exception as e:
+            if db_connection:
+                db_connection.rollback()
+            raise Exception(f"Unexpected error during database modification: {e}")
+            
         finally:
             self.close_db(db_connection, db_cursor)
 
@@ -253,10 +274,13 @@ class Database:
             self.close_db(db_connection, db_cursor)
 
 
-    def check_value(self, query):
+    def check_value(self, query, params=None):
         try:
             db_connection, db_cursor = self.open_db()
-            db_cursor.execute(query)
+            if params:
+                db_cursor.execute(query, params)
+            else:
+                db_cursor.execute(query)
             db_connection.commit()
             value = db_cursor.fetchall()
             return value
