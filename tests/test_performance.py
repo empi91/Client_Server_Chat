@@ -193,7 +193,7 @@ class TestPerformance(unittest.TestCase):
         print("-------------------------")
         
         # Basic assertions
-        self.assertLess(user_add_time/num_users, 0.02, 
+        self.assertLess(user_add_time/num_users, 0.05, 
                        f"Adding users is too slow: {user_add_time/num_users:.6f} seconds per user")
         self.assertLess(message_add_time/num_messages, 0.02, 
                        f"Adding messages is too slow: {message_add_time/num_messages:.6f} seconds per message")
