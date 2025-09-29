@@ -1,10 +1,9 @@
 """ Test suite for Server class"""
 
 import unittest
-import json
 import os
-import time
 import shutil
+import psycopg2
 from datetime import datetime, timedelta
 from server import Server, UserAuthenticator
 from config import config
@@ -19,16 +18,12 @@ class TestServer(unittest.TestCase):
     def setUp(self):
         """Setting up for testing Server methods"""
         # Setup test database
-        self.fixtures_path = config.tests.FIXTURES_PATH
         self.original_db_path = Database.DB_FILE
-        
-        self.test_db_file = os.path.join(self.fixtures_path, "test_db.json")
-        self.temp_db_file = os.path.join(self.fixtures_path, "temp_test_db.json")
-        
-        if os.path.exists(self.test_db_file):
-            shutil.copy(self.test_db_file, self.temp_db_file)
-            
-        Database.DB_FILE = self.temp_db_file
+        Database.DB_FILE = config.tests.TEST_DB_FILE
+        self.init_test_db()
+        self.create_test_db_tables()
+        self.populate_test_db()
+        self.db = Database()
         
         # Create a test server instance
         self.server = Server()
@@ -40,12 +35,102 @@ class TestServer(unittest.TestCase):
         # Create a test connection for testing
         self.connection = Connection()
 
+
+    def tearDown(self):
+        """Clean up after tests"""
+        self.drop_test_db()
+        Database.DB_FILE = self.original_db_path
+
+
+    def init_test_db(self):
+        # Create test database
+        try:
+            conn = psycopg2.connect(host="localhost", dbname="postgres", user=config.database.DB_USER, 
+                                   password=config.database.DB_PASSWORD, port=config.database.DB_PORT)
+            conn.autocommit = True
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM pg_database WHERE datname=%s;", (Database.DB_FILE,))
+            db_exists = cursor.fetchone()
+            if not db_exists:
+                cursor.execute(f"CREATE DATABASE {Database.DB_FILE};")
+                print(f"New database {Database.DB_FILE} created")
+        except Exception as e: 
+            print(f"Error initializing database: {e}")
+        finally:
+            if conn:
+                conn.close()
+
+
+    def create_test_db_tables(self):
+        # Create tables in database
+        try:
+            conn = psycopg2.connect(host="localhost", dbname=Database.DB_FILE, user=config.database.DB_USER, 
+                                    password=config.database.DB_PASSWORD, port=config.database.DB_PORT)
+            conn.autocommit = True
+            cursor = conn.cursor()
+            
+            # Create the tables using the queries defined in the config
+            cursor.execute(config.database.CREATE_USER_TABLE_QUERY)
+            cursor.execute(config.database.CREATE_MESSAGE_TABLE_QUERY)
+            
+            conn.commit()
+        except Exception as e: 
+            print(f"Error creating test database tables: {e}")
+        finally:
+            if conn:
+                conn.close()
+    
+
+    def populate_test_db(self):
+        """Populate the test database with test users and data required for tests"""
+        try:
+            conn = psycopg2.connect(host="localhost", dbname=Database.DB_FILE, user=config.database.DB_USER, 
+                                    password=config.database.DB_PASSWORD, port=config.database.DB_PORT)
+            conn.autocommit = True
+            cursor = conn.cursor()
+            
+            # Insert test users
+            users = [
+                ("testUser1", "testPassword1", "admin"),
+                ("testUser2", "testPassword2", "user"),
+                ("", "testPassword3", "user")
+            ]
+            
+            for username, password, account_type in users:
+                cursor.execute(
+                    "INSERT INTO users (username, password, account_type) VALUES (%s, %s, %s) ON CONFLICT (username) DO NOTHING",
+                    (username, password, account_type)
+                )
+            
+            conn.commit()
+        except Exception as e:
+            print(f"Error populating test database: {e}")
+        finally:
+            if conn:
+                conn.close()
+        
+
+    def drop_test_db(self):
+        try:
+            conn = psycopg2.connect(host="localhost", dbname="postgres", user=config.database.DB_USER, 
+                                   password=config.database.DB_PASSWORD, port=config.database.DB_PORT)
+            conn.autocommit = True
+            cursor = conn.cursor()
+            cursor.execute(f"DROP DATABASE {Database.DB_FILE};")
+        except Exception as e: 
+            print(f"Error dropping database: {e}")
+        finally:
+            if conn:
+                conn.close()
+
+
     def test_server_initialization(self):
         """Test proper initialization of the server"""
         self.assertIsNotNone(self.server.db_helper)
         self.assertEqual(self.server.server_host, config.network.HOST)
         self.assertEqual(self.server.server_port, config.network.PORT)
         self.assertIsInstance(self.server.start_time, datetime)
+
 
     def test_server_start(self):
         """Test starting the server"""
@@ -60,6 +145,7 @@ class TestServer(unittest.TestCase):
         finally:
             if hasattr(s, 'close'):
                 s.close()
+
 
     def test_message_handling(self):
         """Test that different message headers are routed to correct handler methods."""
@@ -78,6 +164,7 @@ class TestServer(unittest.TestCase):
         response = self.server.process_message(invalid_message, self.connection)
         self.assertEqual(response.header, "Error")
         self.assertEqual(response.text, "Invalid message header")
+
 
     def test_command_handling(self):
         """ Test all server commands (help, uptime, info, inbox, stop) return correct responses."""
@@ -105,6 +192,7 @@ class TestServer(unittest.TestCase):
         self.assertEqual(response.header, "Stop")
         self.assertEqual(response.text, "Stop")
 
+
     def test_uptime_calc(self):
         """Test uptime calculation accuracy and proper formatting of time components."""
         days, hours, minutes, seconds = self.server.calc_uptime()
@@ -117,6 +205,7 @@ class TestServer(unittest.TestCase):
         # Seconds will vary because of test execution time, but should be roughly correct
         self.assertGreaterEqual(seconds, 0)
         self.assertLess(seconds, 86400)  # Less than a day in seconds
+
 
     def test_authentication_flow(self):
         """Test complete authentication workflow for both existing and new users."""
@@ -132,12 +221,7 @@ class TestServer(unittest.TestCase):
         # Test authentication for the same user (now existing)
         response = self.server.handle_authentication(auth_msg, self.connection)
         self.assertTrue(response.text["is_registered"])
-        
-        # Clean up - remove test user from database
-        # For test purposes only, we're directly manipulating the database
-        db = self.server.db_helper.db.open_db()
-        db["users"] = [user for user in db["users"] if user["Username"] != "new_test_user"]
-        self.server.db_helper.db.dump_db(db)
+
 
     def test_message_sending_validation(self):
         """Test message sending with various scenarios including valid and invalid recipients and empty/full inboxes."""
@@ -145,21 +229,17 @@ class TestServer(unittest.TestCase):
         self.server.db_helper.register_new_user("test_receiver", "password_hash")
         
         # Test sending message to valid recipient
-        msg = Message("Message", "Test message content", "test_sender", "test_receiver")
+        msg = Message("Message", "Test message content", "testUser1", "test_receiver")
         response = self.server.handle_sending_message(msg, self.connection)
         self.assertEqual(response.header, "Status")
         self.assertTrue(response.text)  # Should be True for successful message sending
         
         # Test sending message to non-existent recipient
-        msg = Message("Message", "Test message content", "test_sender", "non_existent_user")
+        msg = Message("Message", "Test message content", "testUser1", "non_existent_user")
         response = self.server.handle_sending_message(msg, self.connection)
         self.assertEqual(response.header, "Error")
         self.assertEqual(response.text, "Receiver not existing in database")
-        
-        # Clean up - remove test receiver from database
-        db = self.server.db_helper.db.open_db()
-        db["users"] = [user for user in db["users"] if user["Username"] != "test_receiver"]
-        self.server.db_helper.db.dump_db(db)
+
 
     def test_error_message_handling(self):
         """Test that invalid message headers and malformed requests generate proper error responses."""
@@ -172,33 +252,31 @@ class TestServer(unittest.TestCase):
         self.assertEqual(response.sender, self.server.server_host)
         self.assertEqual(response.receiver, "test_sender")
         
-    def tearDown(self):
-        """Clean up after tests"""
-        # Restore original database path
-        Database.DB_FILE = self.original_db_path
-        
-        # Remove temporary test file
-        if os.path.exists(self.temp_db_file):
-            os.remove(self.temp_db_file)
-
 
 class TestUserAuthenticator(unittest.TestCase):
     """ Test suite for UserAuthenticator class """
 
+
     def setUp(self):
-        """Setting up for testing UserAuthenticator methods"""
+        """Setting up for testing Server methods"""
         # Setup test database
-        self.fixtures_path = config.tests.FIXTURES_PATH
         self.original_db_path = Database.DB_FILE
+        Database.DB_FILE = config.tests.TEST_DB_FILE
+        self.init_test_db()
+        self.create_test_db_tables()
+        self.populate_test_db()
+        self.db = Database()
         
-        self.test_db_file = os.path.join(self.fixtures_path, "test_db.json")
-        self.temp_db_file = os.path.join(self.fixtures_path, "temp_test_db.json")
+        # Create a test server instance
+        self.server = Server()
+        self.server.db_helper = DbHelper()
         
-        if os.path.exists(self.test_db_file):
-            shutil.copy(self.test_db_file, self.temp_db_file)
-            
-        Database.DB_FILE = self.temp_db_file
+        # Set a fixed start time for consistent uptime testing
+        self.server.start_time = datetime.now() - timedelta(days=1, hours=2, minutes=30, seconds=15)
         
+        # Create a test connection for testing
+        self.connection = Connection()
+
         # Create test data
         self.test_login = "test_auth_user"
         self.test_password = "test_password"
@@ -209,25 +287,95 @@ class TestUserAuthenticator(unittest.TestCase):
         
         # Create authenticator instance
         self.authenticator = UserAuthenticator(self.message)
-        
-        # Ensure test user doesn't exist before tests
-        db = self.authenticator.db_helper.db.open_db()
-        db["users"] = [user for user in db["users"] if user["Username"] != self.test_login]
-        self.authenticator.db_helper.db.dump_db(db)
+
 
     def tearDown(self):
         """Clean up after tests"""
-        # Remove test user from database
-        db = self.authenticator.db_helper.db.open_db()
-        db["users"] = [user for user in db["users"] if user["Username"] != self.test_login]
-        self.authenticator.db_helper.db.dump_db(db)
-        
-        # Restore original database path
+        self.drop_test_db()
         Database.DB_FILE = self.original_db_path
+
+
+    def init_test_db(self):
+        # Create test database
+        try:
+            conn = psycopg2.connect(host="localhost", dbname="postgres", user=config.database.DB_USER, 
+                                   password=config.database.DB_PASSWORD, port=config.database.DB_PORT)
+            conn.autocommit = True
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM pg_database WHERE datname=%s;", (Database.DB_FILE,))
+            db_exists = cursor.fetchone()
+            if not db_exists:
+                cursor.execute(f"CREATE DATABASE {Database.DB_FILE};")
+                print(f"New database {Database.DB_FILE} created")
+        except Exception as e: 
+            print(f"Error initializing database: {e}")
+        finally:
+            if conn:
+                conn.close()
+
+
+    def create_test_db_tables(self):
+        # Create tables in database
+        try:
+            conn = psycopg2.connect(host="localhost", dbname=Database.DB_FILE, user=config.database.DB_USER, 
+                                    password=config.database.DB_PASSWORD, port=config.database.DB_PORT)
+            conn.autocommit = True
+            cursor = conn.cursor()
+            
+            # Create the tables using the queries defined in the config
+            cursor.execute(config.database.CREATE_USER_TABLE_QUERY)
+            cursor.execute(config.database.CREATE_MESSAGE_TABLE_QUERY)
+            
+            conn.commit()
+        except Exception as e: 
+            print(f"Error creating test database tables: {e}")
+        finally:
+            if conn:
+                conn.close()
+    
+
+    def populate_test_db(self):
+        """Populate the test database with test users and data required for tests"""
+        try:
+            conn = psycopg2.connect(host="localhost", dbname=Database.DB_FILE, user=config.database.DB_USER, 
+                                    password=config.database.DB_PASSWORD, port=config.database.DB_PORT)
+            conn.autocommit = True
+            cursor = conn.cursor()
+            
+            # Insert test users
+            users = [
+                ("testUser1", "testPassword1", "admin"),
+                ("testUser2", "testPassword2", "user"),
+                ("", "testPassword3", "user")
+            ]
+            
+            for username, password, account_type in users:
+                cursor.execute(
+                    "INSERT INTO users (username, password, account_type) VALUES (%s, %s, %s) ON CONFLICT (username) DO NOTHING",
+                    (username, password, account_type)
+                )
+            
+            conn.commit()
+        except Exception as e:
+            print(f"Error populating test database: {e}")
+        finally:
+            if conn:
+                conn.close()
         
-        # Remove temporary test file
-        if os.path.exists(self.temp_db_file):
-            os.remove(self.temp_db_file)
+
+    def drop_test_db(self):
+        try:
+            conn = psycopg2.connect(host="localhost", dbname="postgres", user=config.database.DB_USER, 
+                                   password=config.database.DB_PASSWORD, port=config.database.DB_PORT)
+            conn.autocommit = True
+            cursor = conn.cursor()
+            cursor.execute(f"DROP DATABASE {Database.DB_FILE};")
+        except Exception as e: 
+            print(f"Error dropping database: {e}")
+        finally:
+            if conn:
+                conn.close()
+
 
     def test_user_registration(self):
         """Test user registration process including various account types"""
@@ -240,6 +388,7 @@ class TestUserAuthenticator(unittest.TestCase):
         
         # Verify the user was actually added to the database
         self.assertTrue(self.authenticator.db_helper.check_if_registered(self.test_login))
+
 
     def test_user_login(self):
         """Test user login process with valid and invalid credentials."""
@@ -262,6 +411,7 @@ class TestUserAuthenticator(unittest.TestCase):
         self.assertTrue(auth_result["is_registered"])
         self.assertFalse(auth_result["login_successfull"])
 
+
     def test_password_hashing(self):
         """Test if password hashing is working correctly"""
         # Hash a password
@@ -273,6 +423,7 @@ class TestUserAuthenticator(unittest.TestCase):
         # Verify password validation works
         self.assertTrue(self.authenticator.verify_password(self.test_password, hashed_password))
         self.assertFalse(self.authenticator.verify_password("wrong_password", hashed_password))
+
 
     def test_auth_edge_cases(self):
         """Test authentication with empty passwords, very long passwords, and special characters."""

@@ -4,8 +4,6 @@ import unittest
 from db import Database, DbHelper
 from config import config
 import os
-import json
-import shutil
 import psycopg2
 
 
