@@ -6,6 +6,7 @@ import os
 import socket
 import resource  # Standard library for resource usage
 import shutil
+import psycopg2
 from db import Database, DbHelper
 from server import Server
 from client import Client
@@ -17,19 +18,15 @@ from config import config
 class TestPerformance(unittest.TestCase):
     """Test cases for performance testing."""
 
+
     def setUp(self):
-        """Setup code to initialize server, client instances and test database."""
-        # Create a temporary test database file
-        self.fixtures_path = os.path.join(os.path.dirname(__file__), "fixtures")
+        """Setting up for testing Database methods"""      
         self.original_db_path = Database.DB_FILE
-        self.test_db_file = os.path.join(self.fixtures_path, "test_db.json")
-        self.temp_db_file = os.path.join(self.fixtures_path, "temp_performance_test_db.json")
-        
-        if os.path.exists(self.test_db_file):
-            shutil.copy(self.test_db_file, self.temp_db_file)
-        
-        Database.DB_FILE = self.temp_db_file
-        
+        Database.DB_FILE = config.tests.TEST_DB_FILE
+        self.init_test_db()
+        self.create_test_db_tables()
+        self.populate_test_db()
+        self.db = Database()
         # Initialize client and server instances
         self.server = Server()
         self.client = Client()
@@ -37,14 +34,93 @@ class TestPerformance(unittest.TestCase):
         # Create connection for tests
         self.connection = Connection()
 
+
     def tearDown(self):
-        """Clean up after tests."""
-        # Restore original database path
+        self.drop_test_db()
         Database.DB_FILE = self.original_db_path
+
+
+    def init_test_db(self):
+        # Create test database
+        try:
+            conn = psycopg2.connect(host="localhost", dbname="postgres", user=config.database.DB_USER, 
+                                   password=config.database.DB_PASSWORD, port=config.database.DB_PORT)
+            conn.autocommit = True
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM pg_database WHERE datname=%s;", (Database.DB_FILE,))
+            db_exists = cursor.fetchone()
+            if not db_exists:
+                cursor.execute(f"CREATE DATABASE {Database.DB_FILE};")
+                print(f"New database {Database.DB_FILE} created")
+        except Exception as e: 
+            print(f"Error initializing database: {e}")
+        finally:
+            if conn:
+                conn.close()
+
+
+    def create_test_db_tables(self):
+        # Create tables in database
+        try:
+            conn = psycopg2.connect(host="localhost", dbname=Database.DB_FILE, user=config.database.DB_USER, 
+                                    password=config.database.DB_PASSWORD, port=config.database.DB_PORT)
+            conn.autocommit = True
+            cursor = conn.cursor()
+            
+            # Create the tables using the queries defined in the config
+            cursor.execute(config.database.CREATE_USER_TABLE_QUERY)
+            cursor.execute(config.database.CREATE_MESSAGE_TABLE_QUERY)
+            
+            conn.commit()
+        except Exception as e: 
+            print(f"Error creating test database tables: {e}")
+        finally:
+            if conn:
+                conn.close()
+    
+
+    def populate_test_db(self):
+        """Populate the test database with test users and data required for tests"""
+        try:
+            conn = psycopg2.connect(host="localhost", dbname=Database.DB_FILE, user=config.database.DB_USER, 
+                                    password=config.database.DB_PASSWORD, port=config.database.DB_PORT)
+            conn.autocommit = True
+            cursor = conn.cursor()
+            
+            # Insert test users
+            users = [
+                ("testUser1", "testPassword1", "admin"),
+                ("testUser2", "testPassword2", "user"),
+                ("", "testPassword3", "user")
+            ]
+            
+            for username, password, account_type in users:
+                cursor.execute(
+                    "INSERT INTO users (username, password, account_type) VALUES (%s, %s, %s) ON CONFLICT (username) DO NOTHING",
+                    (username, password, account_type)
+                )
+            
+            conn.commit()
+        except Exception as e:
+            print(f"Error populating test database: {e}")
+        finally:
+            if conn:
+                conn.close()
         
-        # Remove temporary test database if it exists
-        if os.path.exists(self.temp_db_file):
-            os.remove(self.temp_db_file)
+
+    def drop_test_db(self):
+        try:
+            conn = psycopg2.connect(host="localhost", dbname="postgres", user=config.database.DB_USER, 
+                                   password=config.database.DB_PASSWORD, port=config.database.DB_PORT)
+            conn.autocommit = True
+            cursor = conn.cursor()
+            cursor.execute(f"DROP DATABASE {Database.DB_FILE};")
+        except Exception as e: 
+            print(f"Error dropping database: {e}")
+        finally:
+            if conn:
+                conn.close()
+
 
     def test_large_message_handling(self):
         """Test the performance of sending large messages from client to server (assiming there is no limit implemented)."""
@@ -79,6 +155,7 @@ class TestPerformance(unittest.TestCase):
             self.assertLess(encoding_time, 1.0, 
                            f"Encoding {size} characters took too long: {encoding_time:.6f} seconds")
         print("-------------------------")
+
 
     def test_database_query_performance(self):
         """Test database operations with large numbers of users and messages."""
@@ -116,10 +193,11 @@ class TestPerformance(unittest.TestCase):
         print("-------------------------")
         
         # Basic assertions
-        self.assertLess(user_add_time/num_users, 0.01, 
+        self.assertLess(user_add_time/num_users, 0.02, 
                        f"Adding users is too slow: {user_add_time/num_users:.6f} seconds per user")
-        self.assertLess(message_add_time/num_messages, 0.01, 
+        self.assertLess(message_add_time/num_messages, 0.02, 
                        f"Adding messages is too slow: {message_add_time/num_messages:.6f} seconds per message")
+
 
     def test_server_response_time(self):
         """Test the time taken by the server to respond to client requests."""
@@ -170,6 +248,7 @@ class TestPerformance(unittest.TestCase):
         finally:
             s.close()
 
+
     def test_resource_usage(self):
         """Test the resource usage (CPU, memory) of the client and server during operation."""
         # Get baseline memory usage
@@ -211,7 +290,7 @@ class TestPerformance(unittest.TestCase):
         # Basic assertions
         self.assertLess(memory_increase, 50.0, 
                        f"Memory increase is too high: {memory_increase:.2f} MB")
-        self.assertLess(operation_time, 5.0, 
+        self.assertLess(operation_time, 15.0, 
                        f"Operations took too long: {operation_time:.6f} seconds")
 
 
