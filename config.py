@@ -42,8 +42,8 @@ class DatabaseConfig:
         receiver_id INTEGER         NOT NULL REFERENCES users(id),
         timestamp   TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
         content     TEXT            NOT NULL,
-        CONSTRAINT fk_sender FOREIGN KEY (sender_id) REFERENCES users(id),
-        CONSTRAINT fk_receiver FOREIGN KEY (receiver_id) REFERENCES users(id)
+        CONSTRAINT fk_sender FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE RESTRICT,
+        CONSTRAINT fk_receiver FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE RESTRICT
         );
         CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id);
         '''
@@ -53,20 +53,7 @@ class DatabaseConfig:
 class MessageConfig:
     """Message handling and validation configuration."""
     MAX_MESSAGE_LENGTH: int = 255
-    
-    # Valid message headers - using tuple for immutability
-    # VALID_HEADERS: Tuple[str, ...] = (
-    #     'Command', 'Authentication', 'Message', 'Error', 
-    #     'Status', 'Acc_type', 'Authentication_answer', 
-    #     'Account_type_update', 'Inbox_message', 'Stop'
-    # )
-    
-    # # Valid commands
-    # VALID_COMMANDS: Tuple[str, ...] = (
-    #     '!message', '!inbox', '!info', '!uptime', 
-    #     '!stop', '!help'
-    # )
-    
+       
     # Valid account types
     VALID_ACCOUNT_TYPES = ('admin', 'user')
 
