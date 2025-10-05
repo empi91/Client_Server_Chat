@@ -13,9 +13,9 @@
 
 # This project
 1. This project is a client-server communication program based on sockets, using only Python, without any additional frameworks.
-2.List of task I'm currently working on is in the # TODO section below. For now, please do not suggest anything not from that list. However, if there are any design principles that could be followed since the beginning to simplify future integration and development, please mention them in your answer. Keep it simple and don't add too much — it's a learning project.
+2. List of task I'm currently working on is in the # TODO section below. For now, please do not suggest anything not from that list. However, if there are any design principles that could be followed since the beginning to simplify future integration and development, please mention them in your answer. Keep it simple and don't add too much — it's a learning project.
 4. Ignore the fact that for now server can only have one client connected at the time
-5. For now also do not include anything related to multi-threading. I'll add it later. However, if there is any design choice which does not influence (much) current work and yet it can help with future implementation of ulti threading, let me know about it. 
+
 
 # TODO
-- migrate the database from local json file into a proper PostrgeSQL database
+- Implement a custom ConnectionPool for managing database connections more effectively. Don't use any external libraries for this; build it from scratch.

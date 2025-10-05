@@ -8,6 +8,7 @@ import json
 import os 
 import psycopg2
 from config import config
+from connection_pool import ConnectionPool
 
 class Database:
     """Low-level database operations for JSON file storage.
@@ -20,12 +21,22 @@ class Database:
     DB_USER = config.database.DB_USER
     DB_PASSWORD = config.database.DB_PASSWORD
     DB_PORT = config.database.DB_PORT
+    CONNECTION_POOL = None
+    _instance = None
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
 
     def __init__(self):
         """Connect to exisitng PostgreSQL database or create new one"""
         # Connecting to existing DB
+        self.CONNECTION_POOL = ConnectionPool()
         self.initialize_db()
         self.create_db_tables()
+
 
 
     def initialize_db(self):
@@ -296,10 +307,13 @@ class Database:
         Returns:
             The loaded database dictionary.
         """
-        db_connection = psycopg2.connect(host="localhost", dbname = self.DB_FILE, user=self.DB_USER, password=self.DB_PASSWORD, port=self.DB_PORT)
-        db_cursor = db_connection.cursor()
+
+        # db_connection = psycopg2.connect(host="localhost", dbname = self.DB_FILE, user=self.DB_USER, password=self.DB_PASSWORD, port=self.DB_PORT)
+        # db_cursor = db_connection.cursor()
         # print("PostgreSQL connection open.")
-        return db_connection, db_cursor
+        # return db_connection, db_cursor
+
+        return self.CONNECTION_POOL.share_connection()
 
 
     def close_db(self, connection, cursor):
@@ -318,7 +332,8 @@ class DbHelper:
     """
     
     def __init__(self):
-        self.db = Database()
+        # self.db = Database()
+        self.db = Database.get_instance()
         
         
     def get_msg_from_inbox(self, login):
