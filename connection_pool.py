@@ -21,7 +21,7 @@ class ConnectionPool:
 
     def __init__(self):
         """Create connection pool and prepare for operations"""
-        self.allocate_db_connections(10)
+        self.allocate_db_connections(3)
 
 
     def allocate_db_connections(self, no_of_connections):
@@ -38,16 +38,29 @@ class ConnectionPool:
         return db_connection, db_cursor
 
 
-    def share_connection(self):
+    def get_connection(self):
         """Sharing allocated connections with database peration methods"""
-        if len(self.open_connections) > 0:
-            connection_tuple = self.open_connections[0]
-            self.open_connections.pop(0)
-            self.used_connection.append(connection_tuple)
-            print(f"Connections remaining in pool: {len(self.open_connections)}")
-            return connection_tuple[0], connection_tuple[1]
+        if len(self.open_connections) == 1:
+            self.allocate_db_connections(10)
+
+        connection_tuple = self.open_connections[0]
+        self.open_connections.pop(0)
+        self.used_connection.append(connection_tuple)
+        print(f"Connections remaining in pool: {len(self.open_connections)}")
+        return connection_tuple[0], connection_tuple[1]
+
+
+    def return_connection(self, db_conn, db_cursor):
+        if len(self.open_connections) <= 10:
+            if (db_conn, db_cursor) not in self.open_connections:
+                self.open_connections.append((db_conn, db_cursor))
         else:
-            raise Exception("0 remaining connections in connection pool!")
+            db_cursor.close()
+            db_conn.close()
+        print(f"Connections remaining in pool: {len(self.open_connections)}")
+
+
+       
 
 
 

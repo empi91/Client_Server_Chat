@@ -26,9 +26,11 @@ class Database:
 
     @classmethod
     def get_instance(cls):
+        """Utilizing Singelton pattern, to ensure a single databse is used across entire project"""
         if cls._instance is None:
             cls._instance = cls()
         return cls._instance
+    
 
     def __init__(self):
         """Connect to exisitng PostgreSQL database or create new one"""
@@ -36,7 +38,6 @@ class Database:
         self.CONNECTION_POOL = ConnectionPool()
         self.initialize_db()
         self.create_db_tables()
-
 
 
     def initialize_db(self):
@@ -310,19 +311,17 @@ class Database:
 
         # db_connection = psycopg2.connect(host="localhost", dbname = self.DB_FILE, user=self.DB_USER, password=self.DB_PASSWORD, port=self.DB_PORT)
         # db_cursor = db_connection.cursor()
-        # print("PostgreSQL connection open.")
         # return db_connection, db_cursor
 
-        return self.CONNECTION_POOL.share_connection()
+        return self.CONNECTION_POOL.get_connection()
 
 
     def close_db(self, connection, cursor):
-        if connection:
-            cursor.close()
-            connection.close()
-            # print("PostgreSQL connection closed.")
-            
-            
+        # if connection:
+        #     cursor.close()
+        #     connection.close()
+        self.CONNECTION_POOL.return_connection(connection, cursor)
+                       
             
 class DbHelper:
     """High-level database helper providing simplified database operations.
@@ -332,7 +331,6 @@ class DbHelper:
     """
     
     def __init__(self):
-        # self.db = Database()
         self.db = Database.get_instance()
         
         
