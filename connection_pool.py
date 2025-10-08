@@ -20,9 +20,11 @@ class ConnectionPool:
 
     def __init__(self):
         """Create connection pool and prepare for operations"""
+        self.min_connections = 5
+        self.max_connections = 100
         self.open_connections = []
-        self.used_connection = []
-        self.allocate_db_connections(5)
+        self.used_connection = 0
+        self.allocate_db_connections(self.min_connections)
 
 
     def allocate_db_connections(self, no_of_connections):
@@ -41,12 +43,20 @@ class ConnectionPool:
 
     def get_connection(self):
         """Sharing allocated connections with database peration methods"""
-        if len(self.open_connections) == 1:
-            self.allocate_db_connections(10)
+        # If pool is empty or has only 1 connection left, allocate more
+        if len(self.open_connections) <= 1 and self.used_connection <= 94:
+            self.allocate_db_connections(5)
+        
+        # If pool is still empty, create a new connection directly
+        if len(self.open_connections) == 0:
+            if self.used_connection < self.max_connections:
+                return self.create_new_connection()
+            else:
+                raise Exception("Maximum number of database connections reached")
 
         connection_tuple = self.open_connections[0]
         self.open_connections.pop(0)
-        self.used_connection.append(connection_tuple)
+        self.used_connection += 1
         print(f"Connections remaining in pool: {len(self.open_connections)}")
         return connection_tuple[0], connection_tuple[1]
 
@@ -55,6 +65,7 @@ class ConnectionPool:
         if len(self.open_connections) <= 10:
             if (db_conn, db_cursor) not in self.open_connections:
                 self.open_connections.append((db_conn, db_cursor))
+                self.used_connection -= 1
         else:
             db_cursor.close()
             db_conn.close()
@@ -67,14 +78,6 @@ class ConnectionPool:
             cursor.close()
             conn.close()
         self.open_connections.clear()
-
-        for conn, cursor in self.used_connection:
-            cursor.close()
-            conn.close()
-        self.used_connection.clear()
-
-       
-
 
 
     def check_connections_number(self):

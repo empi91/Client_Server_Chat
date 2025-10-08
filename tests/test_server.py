@@ -2,7 +2,7 @@
 
 import unittest
 import os
-import shutil
+import time
 import psycopg2
 from datetime import datetime, timedelta
 from server import Server, UserAuthenticator
@@ -10,6 +10,7 @@ from config import config
 from message import Message
 from connection import Connection
 from db import DbHelper, Database
+from connection_pool import ConnectionPool
 
 
 class TestServer(unittest.TestCase):
@@ -20,6 +21,7 @@ class TestServer(unittest.TestCase):
         # Setup test database
         self.original_db_path = Database.DB_FILE
         Database.DB_FILE = config.tests.TEST_DB_FILE
+        ConnectionPool.DB_FILE = config.tests.TEST_DB_FILE
         self.init_test_db()
         self.create_test_db_tables()
         self.populate_test_db()
@@ -38,8 +40,15 @@ class TestServer(unittest.TestCase):
 
     def tearDown(self):
         """Clean up after tests"""
+        self.db.CONNECTION_POOL.close_all_connections()
+        self.server.db_helper.db.CONNECTION_POOL.close_all_connections()
+        ConnectionPool.DB_FILE = self.original_db_path
+
+        time.sleep(0.1)
+
         self.drop_test_db()
         Database.DB_FILE = self.original_db_path
+
 
 
     def init_test_db(self):
@@ -116,6 +125,7 @@ class TestServer(unittest.TestCase):
                                    password=config.database.DB_PASSWORD, port=config.database.DB_PORT)
             conn.autocommit = True
             cursor = conn.cursor()
+            cursor.execute(f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s;", (Database.DB_FILE,))
             cursor.execute(f"DROP DATABASE {Database.DB_FILE};")
         except Exception as e: 
             print(f"Error dropping database: {e}")
@@ -262,6 +272,7 @@ class TestUserAuthenticator(unittest.TestCase):
         # Setup test database
         self.original_db_path = Database.DB_FILE
         Database.DB_FILE = config.tests.TEST_DB_FILE
+        ConnectionPool.DB_FILE = config.tests.TEST_DB_FILE
         self.init_test_db()
         self.create_test_db_tables()
         self.populate_test_db()
@@ -291,6 +302,13 @@ class TestUserAuthenticator(unittest.TestCase):
 
     def tearDown(self):
         """Clean up after tests"""
+
+        self.db.CONNECTION_POOL.close_all_connections()
+        self.server.db_helper.db.CONNECTION_POOL.close_all_connections()
+        ConnectionPool.DB_FILE = self.original_db_path
+
+        time.sleep(0.1)
+
         self.drop_test_db()
         Database.DB_FILE = self.original_db_path
 
@@ -369,6 +387,7 @@ class TestUserAuthenticator(unittest.TestCase):
                                    password=config.database.DB_PASSWORD, port=config.database.DB_PORT)
             conn.autocommit = True
             cursor = conn.cursor()
+            cursor.execute(f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s;", (Database.DB_FILE,))
             cursor.execute(f"DROP DATABASE {Database.DB_FILE};")
         except Exception as e: 
             print(f"Error dropping database: {e}")

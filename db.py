@@ -68,7 +68,8 @@ class Database:
         except Exception as e: 
             print(f"Error initializing databse: {e}")
         finally:
-            self.close_db(db_connection, db_cursor)
+            if db_connection and db_cursor:
+                self.close_db(db_connection, db_cursor)
       
 
     def check_user_in_db(self, username: str) -> bool:
@@ -96,7 +97,8 @@ class Database:
         except Exception as e: 
             print(f"Error initializing databse: {e}")
         finally:
-            self.close_db(db_connection, db_cursor)
+            if db_connection and db_cursor:
+                self.close_db(db_connection, db_cursor)
  
  
     def get_user_password(self, username: str) -> str:
@@ -117,7 +119,8 @@ class Database:
         except:
             return False
         finally:
-            self.close_db(db_connection, db_cursor)
+            if db_connection and db_cursor:
+                self.close_db(db_connection, db_cursor)
    
     
     def add_user_to_db(self, login, password, type=None):
@@ -140,7 +143,8 @@ class Database:
         except:
             return False
         finally:
-            self.close_db(db_connection, db_cursor)
+            if db_connection and db_cursor:
+                self.close_db(db_connection, db_cursor)
 
 
     def remove_user_from_db(self):
@@ -186,7 +190,8 @@ class Database:
             raise Exception(f"Unexpected error during database modification: {e}")
             
         finally:
-            self.close_db(db_connection, db_cursor)
+            if db_connection and db_cursor:
+                self.close_db(db_connection, db_cursor)
             
 
     def add_msg_to_db(self, username, sender, message) -> bool:
@@ -217,7 +222,8 @@ class Database:
             raise Exception(f"Unexpected error during database modification: {e}")
             
         finally:
-            self.close_db(db_connection, db_cursor)
+            if db_connection and db_cursor:
+                self.close_db(db_connection, db_cursor)
 
 
     def read_msg_from_inbox(self, username) -> list[str, str]:
@@ -261,7 +267,8 @@ class Database:
         except Exception as e: 
             print(f"Error initializing databse: {e}")
         finally:
-            self.close_db(db_connection, db_cursor)
+            if db_connection and db_cursor:
+                self.close_db(db_connection, db_cursor)
     
  
     def check_user_inbox(self, username) -> int:
@@ -283,7 +290,8 @@ class Database:
         except:
             raise KeyError(f"User {username} does not exist")
         finally:
-            self.close_db(db_connection, db_cursor)
+            if db_connection and db_cursor:
+                self.close_db(db_connection, db_cursor)
 
 
     def check_value(self, query, params=None):
@@ -299,7 +307,8 @@ class Database:
         except:
             raise KeyError(f"Invalid query")
         finally:
-            self.close_db(db_connection, db_cursor)
+            if db_connection and db_cursor:
+                self.close_db(db_connection, db_cursor)
 
 
     def open_db(self):
