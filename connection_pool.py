@@ -11,8 +11,7 @@ from config import config
 
 class ConnectionPool:
 
-    open_connections = []
-    used_connection = []
+
     DB_FILE = config.database.DB_FILE
     DB_USER = config.database.DB_USER
     DB_PASSWORD = config.database.DB_PASSWORD
@@ -21,7 +20,9 @@ class ConnectionPool:
 
     def __init__(self):
         """Create connection pool and prepare for operations"""
-        self.allocate_db_connections(3)
+        self.open_connections = []
+        self.used_connection = []
+        self.allocate_db_connections(5)
 
 
     def allocate_db_connections(self, no_of_connections):
@@ -59,6 +60,18 @@ class ConnectionPool:
             db_conn.close()
         print(f"Connections remaining in pool: {len(self.open_connections)}")
 
+
+    def close_all_connections(self):
+        """Closing all connections inside the pool"""
+        for conn, cursor in self.open_connections:
+            cursor.close()
+            conn.close()
+        self.open_connections.clear()
+
+        for conn, cursor in self.used_connection:
+            cursor.close()
+            conn.close()
+        self.used_connection.clear()
 
        
 

@@ -3,6 +3,7 @@
 import unittest
 from db import Database, DbHelper
 from config import config
+from connection_pool import ConnectionPool
 import os
 import psycopg2
 
@@ -14,15 +15,19 @@ class TestDatabase(unittest.TestCase):
         """Setting up for testing Database methods"""      
         self.original_db_path = Database.DB_FILE
         Database.DB_FILE = config.tests.TEST_DB_FILE
+        ConnectionPool.DB_FILE = config.tests.TEST_DB_FILE
         self.init_test_db()
         self.create_test_db_tables()
         self.populate_test_db()
         self.db = Database()
+        
 
 
     def tearDown(self):
+        self.db.CONNECTION_POOL.close_all_connections()
         self.drop_test_db()
         Database.DB_FILE = self.original_db_path
+        ConnectionPool.DB_FILE = self.original_db_path
 
 
     def init_test_db(self):
@@ -111,6 +116,8 @@ class TestDatabase(unittest.TestCase):
         """Testing if Database class creates an empty PostgreSQL database if it doesn't exist.
         Testing if Database handles connecting to the existing database correctly"""
         # Remove automatically created database
+        self.db.CONNECTION_POOL.close_all_connections()
+
         self.drop_test_db()
 
         conn = psycopg2.connect(host="localhost", dbname="postgres", user=config.database.DB_USER, 
@@ -158,6 +165,8 @@ class TestDatabase(unittest.TestCase):
 
         self.assertIn("users", tables)
         self.assertIn("messages", tables)
+
+        db.CONNECTION_POOL.close_all_connections()
         
         if conn:
             conn.close()
@@ -284,6 +293,7 @@ class TestDbHelper(unittest.TestCase):
         """Setting up for testing DbHelper methods"""
         self.original_db_path = Database.DB_FILE
         Database.DB_FILE = config.tests.TEST_DB_FILE
+        ConnectionPool.DB_FILE = config.tests.TEST_DB_FILE
         self.init_test_db()
         self.create_test_db_tables()
         self.populate_test_db()
@@ -291,8 +301,11 @@ class TestDbHelper(unittest.TestCase):
 
 
     def tearDown(self):
+        self.db_helper.db.CONNECTION_POOL.close_all_connections()
         self.drop_test_db()
+        Database._instance = None
         Database.DB_FILE = self.original_db_path
+        ConnectionPool.DB_FILE = self.original_db_path
 
 
     def init_test_db(self):

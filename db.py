@@ -34,9 +34,9 @@ class Database:
 
     def __init__(self):
         """Connect to exisitng PostgreSQL database or create new one"""
-        # Connecting to existing DB
-        self.CONNECTION_POOL = ConnectionPool()
+
         self.initialize_db()
+        self.CONNECTION_POOL = ConnectionPool()
         self.create_db_tables()
 
 
@@ -308,7 +308,6 @@ class Database:
         Returns:
             The loaded database dictionary.
         """
-
         # db_connection = psycopg2.connect(host="localhost", dbname = self.DB_FILE, user=self.DB_USER, password=self.DB_PASSWORD, port=self.DB_PORT)
         # db_cursor = db_connection.cursor()
         # return db_connection, db_cursor
