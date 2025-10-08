@@ -7,6 +7,7 @@ This module provides a connection pool, which:
 """
 
 import psycopg2
+import time
 from config import config
 
 class ConnectionPool:
@@ -22,13 +23,15 @@ class ConnectionPool:
         """Create connection pool and prepare for operations"""
         self.min_connections = 5
         self.max_connections = 100
+        self.clenup_interval = 60
         self.open_connections = []
         self.used_connection = 0
+        self.last_cleanup_time = time.time()
         self.allocate_db_connections(self.min_connections)
 
 
     def allocate_db_connections(self, no_of_connections):
-        """Allocate 10 database connections at the start"""
+        """Allocate X database connections at the start"""
         for _ in range(no_of_connections):
             db_connection, db_cursor = self.create_new_connection()
             self.open_connections.append((db_connection, db_cursor))
@@ -42,34 +45,27 @@ class ConnectionPool:
 
 
     def get_connection(self):
-        """Sharing allocated connections with database peration methods"""
-        # If pool is empty or has only 1 connection left, allocate more
-        if len(self.open_connections) <= 1 and self.used_connection <= 94:
-            self.allocate_db_connections(5)
-        
-        # If pool is still empty, create a new connection directly
+        """Sharing allocated connections with database peration methods"""      
+        # If pool is empty, create a new connection directly
         if len(self.open_connections) == 0:
             if self.used_connection < self.max_connections:
-                return self.create_new_connection()
+                self.allocate_db_connections(5)
+                # return self.create_new_connection()
             else:
                 raise Exception("Maximum number of database connections reached")
 
         connection_tuple = self.open_connections[0]
         self.open_connections.pop(0)
         self.used_connection += 1
-        print(f"Connections remaining in pool: {len(self.open_connections)}")
+        # print(f"Connections remaining in pool: {len(self.open_connections)}")
         return connection_tuple[0], connection_tuple[1]
 
 
     def return_connection(self, db_conn, db_cursor):
-        if len(self.open_connections) <= 10:
-            if (db_conn, db_cursor) not in self.open_connections:
-                self.open_connections.append((db_conn, db_cursor))
-                self.used_connection -= 1
-        else:
-            db_cursor.close()
-            db_conn.close()
-        print(f"Connections remaining in pool: {len(self.open_connections)}")
+        if (db_conn, db_cursor) not in self.open_connections:
+            self.open_connections.append((db_conn, db_cursor))
+            self.used_connection -= 1
+        self.close_extra_connections()
 
 
     def close_all_connections(self):
@@ -78,15 +74,22 @@ class ConnectionPool:
             cursor.close()
             conn.close()
         self.open_connections.clear()
+       
 
-
-    def check_connections_number(self):
-        """Checking if conections limit is reached"""
-        
+    def check_for_cleanup(self):
+        """Checking if it's time for connection cleanup"""
+        current_time = time.time()
+        if self.start_time - current_time > self.clenup_interval:
+            self.close_extra_connections()
+            self.last_cleanup_time = time.time()
 
 
     def close_extra_connections(self):
-        """Close all unused extra connections over the starting 10"""
+        """Close all unused extra connections over the starting 5"""
+        while len(self.open_connections) > self.min_connections:
+            conn, cursor = self.open_connections.pop()
+            cursor.close()
+            conn.close()
 
 
     def close_failing_connection(self):

@@ -148,9 +148,7 @@ class Database:
 
 
     def remove_user_from_db(self):
-
-
-        pass
+        """Removing user from database"""
 
 
     def modify_db(self, username: str, field: str, value: str) -> bool:
