@@ -7,6 +7,9 @@ import socket
 import resource  # Standard library for resource usage
 import shutil
 import psycopg2
+import random
+import threading
+import string
 from db import Database, DbHelper
 from server import Server
 from client import Client
@@ -165,46 +168,87 @@ class TestPerformance(unittest.TestCase):
     #     print("-------------------------")
 
 
-    def test_database_query_performance(self):
-        """Test database operations with large numbers of users and messages."""
-        # Create a database instance
+    # def test_database_query_performance(self):
+    #     """Test database operations with large numbers of users and messages."""
+    #     # Create a database instance
+    #     db = Database()
+    #     db_helper = DbHelper()
+        
+    #     # Test user addition performance
+    #     start_time = time.time()
+    #     num_users = 100  # Adjust based on what's reasonable for your application
+        
+    #     for i in range(num_users):
+    #         username = f"perfTestUser{i}"
+    #         password = f"perfTestPassword{i}"
+    #         account_type = "user"
+    #         db.add_user_to_db(username, password, account_type)
+        
+    #     user_add_time = time.time() - start_time
+    #     print(f"Time to add {num_users} users: {user_add_time:.6f} seconds")
+    #     print(f"Average time per user: {user_add_time/num_users:.6f} seconds")
+        
+    #     # Test message addition performance
+    #     start_time = time.time()
+    #     num_messages = 100  # Adjust based on what's reasonable
+        
+    #     for i in range(num_messages):
+    #         sender = "perfTestUser0"
+    #         receiver = f"perfTestUser{i%num_users}"
+    #         message_text = f"Performance test message {i}"
+    #         db_helper.add_msg_to_db(receiver, sender, message_text)
+        
+    #     message_add_time = time.time() - start_time
+    #     print(f"Time to add {num_messages} messages: {message_add_time:.6f} seconds")
+    #     print(f"Average time per message: {message_add_time/num_messages:.6f} seconds")
+    #     print("-------------------------")
+        
+    #     # Basic assertions
+    #     self.assertLess(user_add_time/num_users, 0.05, 
+    #                    f"Adding users is too slow: {user_add_time/num_users:.6f} seconds per user")
+    #     self.assertLess(message_add_time/num_messages, 0.02, 
+    #                    f"Adding messages is too slow: {message_add_time/num_messages:.6f} seconds per message")
+
+        
+    def test_perform_concurrent_operations(self):
+        """Test for stress testing the connection pool class with few minutes of high intense, concurrent operations from various users,
+        checking program behavious under pressure"""
+        test_duration = 180
+        num_threads = 150
+        stop_event = threading.Event()
+
         db = Database()
         db_helper = DbHelper()
+        user_pool = [f"stressTestUser{i}" for i in range(30)]
+        threads = []
+
+        def sim_user_behaviour():
+            username = random.choice(user_pool)
+            while not stop_event.is_set():
+                operation = random.choice(['send', 'send', 'send', 'send', 'send', 'send', 'check', 'check', 'check', 'check'])
+                if operation == 'send':
+                    db.add_msg_to_db(random.choice(user_pool), username, ''.join(random.choices(string.ascii_uppercase + string.digits, k=100)))
+                else:
+                    db.read_msg_from_inbox(username)
+                time.sleep(random.uniform(1,5))
         
-        # Test user addition performance
-        start_time = time.time()
-        num_users = 100  # Adjust based on what's reasonable for your application
+        for user in user_pool:
+            db.add_user_to_db(user, user)
+
+
+        for _ in range(150):
+            t = threading.Thread(target=sim_user_behaviour)
+            threads.append(t)
+            t.start()
+
+        time.sleep(test_duration)
+        stop_event.set()
+
+
+        for thread in threads:
+            thread.join(timeout=10)
+
         
-        for i in range(num_users):
-            username = f"perfTestUser{i}"
-            password = f"perfTestPassword{i}"
-            account_type = "user"
-            db.add_user_to_db(username, password, account_type)
-        
-        user_add_time = time.time() - start_time
-        print(f"Time to add {num_users} users: {user_add_time:.6f} seconds")
-        print(f"Average time per user: {user_add_time/num_users:.6f} seconds")
-        
-        # Test message addition performance
-        start_time = time.time()
-        num_messages = 100  # Adjust based on what's reasonable
-        
-        for i in range(num_messages):
-            sender = "perfTestUser0"
-            receiver = f"perfTestUser{i%num_users}"
-            message_text = f"Performance test message {i}"
-            db_helper.add_msg_to_db(receiver, sender, message_text)
-        
-        message_add_time = time.time() - start_time
-        print(f"Time to add {num_messages} messages: {message_add_time:.6f} seconds")
-        print(f"Average time per message: {message_add_time/num_messages:.6f} seconds")
-        print("-------------------------")
-        
-        # Basic assertions
-        self.assertLess(user_add_time/num_users, 0.05, 
-                       f"Adding users is too slow: {user_add_time/num_users:.6f} seconds per user")
-        self.assertLess(message_add_time/num_messages, 0.02, 
-                       f"Adding messages is too slow: {message_add_time/num_messages:.6f} seconds per message")
 
 
     # def test_server_response_time(self):

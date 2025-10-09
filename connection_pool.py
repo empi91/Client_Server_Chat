@@ -9,6 +9,7 @@ This module provides a connection pool, which:
 import psycopg2
 import time
 from config import config
+import threading
 
 class ConnectionPool:
 
@@ -21,8 +22,10 @@ class ConnectionPool:
 
     def __init__(self):
         """Create connection pool and prepare for operations"""
+        self.lock = threading.Lock()
         self.min_connections = 5
         self.max_connections = 100
+        self.semaphore = threading.Semaphore(value=self.max_connections)
         self.clenup_interval = 60
         self.open_connections = []
         self.used_connection = 0
@@ -47,25 +50,29 @@ class ConnectionPool:
     def get_connection(self):
         """Sharing allocated connections with database peration methods"""      
         # If pool is empty, create a new connection directly
-        if len(self.open_connections) == 0:
-            if self.used_connection < self.max_connections:
-                self.allocate_db_connections(5)
-                # return self.create_new_connection()
-            else:
-                raise Exception("Maximum number of database connections reached")
+        self.semaphore.acquire()
+        with self.lock:
+            if len(self.open_connections) == 0:
+                if self.used_connection < self.max_connections:
+                    self.allocate_db_connections(5)
+                    # return self.create_new_connection()
+                else:
+                    raise Exception("Maximum number of database connections reached")
 
-        connection_tuple = self.open_connections[0]
-        self.open_connections.pop(0)
-        self.used_connection += 1
-        # print(f"Connections remaining in pool: {len(self.open_connections)}")
-        return connection_tuple[0], connection_tuple[1]
+            connection_tuple = self.open_connections[0]
+            self.open_connections.pop(0)
+            self.used_connection += 1
+            # print(f"Connections remaining in pool: {len(self.open_connections)}")
+            return connection_tuple[0], connection_tuple[1]
 
 
     def return_connection(self, db_conn, db_cursor):
-        if (db_conn, db_cursor) not in self.open_connections:
-            self.open_connections.append((db_conn, db_cursor))
-            self.used_connection -= 1
-        self.close_extra_connections()
+        with self.lock:
+            if (db_conn, db_cursor) not in self.open_connections:
+                self.open_connections.append((db_conn, db_cursor))
+                self.used_connection -= 1
+            self.close_extra_connections()
+            self.semaphore.release()
 
 
     def close_all_connections(self):
