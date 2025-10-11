@@ -10,6 +10,7 @@ from config import config
 
 PATH = pathlib.Path.cwd() / config.database.DB_FILE
 
+
 def main():
     """Start the server application."""
     server = Server()

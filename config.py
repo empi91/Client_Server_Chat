@@ -32,7 +32,7 @@ class DatabaseConfig:
         id SERIAL PRIMARY KEY,
         username     TEXT            NOT NULL UNIQUE,
         password     TEXT            NOT NULL,
-        account_type TEXT 
+        account_type TEXT
         );
         CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
         '''
@@ -53,7 +53,7 @@ class DatabaseConfig:
 class MessageConfig:
     """Message handling and validation configuration."""
     MAX_MESSAGE_LENGTH: int = 255
-       
+
     # Valid account types
     VALID_ACCOUNT_TYPES = ('admin', 'user')
 
@@ -72,7 +72,7 @@ class SecurityConfig:
 class UIConfig:
     """User interface configuration."""
     WELCOME_MESSAGE: str = "Welcome on our server. Please sign in or create new account."
-    
+
     HELP_TEXT: str = (
         "Choose what you want to do:\n"
         "Send a message: Type !message\n"
@@ -114,27 +114,33 @@ class AppConfig:
     ui: UIConfig = UIConfig()
     server: ServerConfig = ServerConfig()
     tests: TestsConfig = TestsConfig()
-    
+
     def validate(self) -> None:
         """Validate configuration values for consistency and correctness."""
         # Network validation
         if not (1024 <= self.network.PORT <= 65535):
-            raise ValueError(f"Invalid port number: {self.network.PORT}. Must be between 1024-65535")
-        
+            raise ValueError(
+                f"Invalid port number: {
+                    self.network.PORT}. Must be between 1024-65535")
+
         if self.network.BUFFER_SIZE <= 0:
-            raise ValueError(f"Buffer size must be positive: {self.network.BUFFER_SIZE}")
-        
+            raise ValueError(
+                f"Buffer size must be positive: {
+                    self.network.BUFFER_SIZE}")
+
         # Message validation
         if self.message.MAX_MESSAGE_LENGTH <= 0:
             raise ValueError("Max message length must be positive")
-        
+
         if self.security.MIN_USERNAME_LENGTH >= self.security.MAX_USERNAME_LENGTH:
-            raise ValueError("Min username length must be less than max username length")
-        
+            raise ValueError(
+                "Min username length must be less than max username length")
+
         # Security validation
         if self.security.PASSWORD_MIN_LENGTH < 4:
-            raise ValueError("Password minimum length too short (minimum 4 characters)")
-        
+            raise ValueError(
+                "Password minimum length too short (minimum 4 characters)")
+
         print("✅ Configuration validation passed")
 
 

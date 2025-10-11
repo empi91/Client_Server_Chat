@@ -4,19 +4,20 @@ This module provides classes for managing user data and messages in a JSON file-
 database system. It handles user authentication, message storage, and data persistence.
 """
 
-import json 
-import os 
+import json
+import os
 import psycopg2
 from config import config
 from connection_pool import ConnectionPool
 
+
 class Database:
     """Low-level database operations for JSON file storage.
-    
+
     Handles direct file operations, user management, and message storage
     in a JSON-based database system.
     """
-    
+
     DB_FILE = config.database.DB_FILE
     DB_USER = config.database.DB_USER
     DB_PASSWORD = config.database.DB_PASSWORD
@@ -30,7 +31,6 @@ class Database:
         if cls._instance is None:
             cls._instance = cls()
         return cls._instance
-    
 
     def __init__(self):
         """Connect to exisitng PostgreSQL database or create new one"""
@@ -39,24 +39,28 @@ class Database:
         self.CONNECTION_POOL = ConnectionPool()
         self.create_db_tables()
 
-
     def initialize_db(self):
         try:
-            conn = psycopg2.connect(host="localhost", dbname = "postgres", user=self.DB_USER, password=self.DB_PASSWORD, port=self.DB_PORT)
+            conn = psycopg2.connect(
+                host="localhost",
+                dbname="postgres",
+                user=self.DB_USER,
+                password=self.DB_PASSWORD,
+                port=self.DB_PORT)
             conn.autocommit = True
             cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM pg_database WHERE datname=%s;", (self.DB_FILE,))
+            cursor.execute(
+                "SELECT 1 FROM pg_database WHERE datname=%s;", (self.DB_FILE,))
             db_exists = cursor.fetchone()
 
             if not db_exists:
                 cursor.execute(f"CREATE DATABASE {self.DB_FILE}")
                 print(f"New database {self.DB_FILE} created")
-        except Exception as e: 
+        except Exception as e:
             print(f"Error initializing databse: {e}")
         finally:
             if conn:
                 conn.close
-
 
     def create_db_tables(self):
         try:
@@ -65,19 +69,18 @@ class Database:
             db_connection.commit()
             db_cursor.execute(config.database.CREATE_MESSAGE_TABLE_QUERY)
             db_connection.commit()
-        except Exception as e: 
+        except Exception as e:
             print(f"Error initializing databse: {e}")
         finally:
             if db_connection and db_cursor:
                 self.close_db(db_connection, db_cursor)
-      
 
     def check_user_in_db(self, username: str) -> bool:
         """Check if a user exists in the database.
-        
+
         Args:
             username: The username to check for existence.
-            
+
         Returns:
             True if user exists, False otherwise.
         """
@@ -94,19 +97,18 @@ class Database:
                     return True
             self.close_db(db_connection, db_cursor)
             return False
-        except Exception as e: 
+        except Exception as e:
             print(f"Error initializing databse: {e}")
         finally:
             if db_connection and db_cursor:
                 self.close_db(db_connection, db_cursor)
- 
- 
+
     def get_user_password(self, username: str) -> str:
         """Retrieve the stored password for a given username.
-        
+
         Args:
             username: The username to get the password for.
-            
+
         Returns:
             The stored password hash for the user.
         """
@@ -116,21 +118,20 @@ class Database:
             db_cursor.execute(get_password_query, (username,))
             db_connection.commit()
             return db_cursor.fetchone()[0]
-        except:
+        except BaseException:
             return False
         finally:
             if db_connection and db_cursor:
                 self.close_db(db_connection, db_cursor)
-   
-    
+
     def add_user_to_db(self, login, password, type=None):
         """Add a new user to the database.
-        
+
         Args:
             login: The username for the new user.
             password: The password (should be hashed) for the new user.
             type: Optional account type (admin/user).
-            
+
         Returns:
             True if user was successfully added.
         """
@@ -140,70 +141,70 @@ class Database:
             db_cursor.execute(add_user_query, (login, password, "user",))
             db_connection.commit()
             return True
-        except:
+        except BaseException:
             return False
         finally:
             if db_connection and db_cursor:
                 self.close_db(db_connection, db_cursor)
 
-
     def remove_user_from_db(self):
         """Removing user from database"""
 
-
     def modify_db(self, username: str, field: str, value: str) -> bool:
         """Modify a specific field for a user in the database.
-        
+
         Args:
             username: The username of the user to modify.
             field: The field name to update.
             value: The new value for the field.
-            
+
         Returns:
             True if modification was successful, False otherwise.
         """
-        allowed_fields = ['password', 'account_type', 'email']  # Add your valid fields
+        allowed_fields = [
+            'password',
+            'account_type',
+            'email']  # Add your valid fields
         if field not in allowed_fields:
             raise ValueError(f"Invalid field name: {field}")
-        
+
         update_data_query = f"UPDATE users SET {field} = %s WHERE username = %s;"
 
-        
         try:
             db_connection, db_cursor = self.open_db()
             db_cursor.execute(update_data_query, (value, username))
-            
+
             rows_affected = db_cursor.rowcount
-            
+
             if rows_affected == 0:
                 db_connection.rollback()
                 raise ValueError(f"User '{username}' not found in database")
-            
+
             db_connection.commit()
             return True
-                        
+
         except Exception as e:
             if db_connection:
                 db_connection.rollback()
-            raise Exception(f"Unexpected error during database modification: {e}")
-            
+            raise Exception(
+                f"Unexpected error during database modification: {e}")
+
         finally:
             if db_connection and db_cursor:
                 self.close_db(db_connection, db_cursor)
-            
 
     def add_msg_to_db(self, username, sender, message) -> bool:
         """Add a message to a user's inbox.
-        
+
         Args:
             username: The recipient's username.
             sender: The sender's username.
             message: The message content.
-            
+
         Returns:
             True if message was successfully added, False otherwise.
         """
-        add_msg_query = """INSERT INTO messages (sender_id, receiver_id, content) 
+        add_msg_query = """INSERT INTO messages (sender_id, receiver_id, content)
                             VALUES (
                             (SELECT id from USERS WHERE username = %s),
                             (SELECT id from USERS WHERE username = %s),
@@ -217,19 +218,19 @@ class Database:
         except Exception as e:
             if db_connection:
                 db_connection.rollback()
-            raise Exception(f"Unexpected error during database modification: {e}")
-            
+            raise Exception(
+                f"Unexpected error during database modification: {e}")
+
         finally:
             if db_connection and db_cursor:
                 self.close_db(db_connection, db_cursor)
 
-
     def read_msg_from_inbox(self, username) -> list[str, str]:
         """Read and remove the first message from a user's inbox.
-        
+
         Args:
             username: The username whose inbox to read from.
-            
+
         Returns:
             A list containing al messages from inbox (sender, message) or (username, "EMPTY") if no messages.
         """
@@ -262,19 +263,18 @@ class Database:
             }
             messages.append(message)
             return messages
-        except Exception as e: 
+        except Exception as e:
             print(f"Error initializing databse: {e}")
         finally:
             if db_connection and db_cursor:
                 self.close_db(db_connection, db_cursor)
-    
- 
+
     def check_user_inbox(self, username) -> int:
         """Check the number of messages in a user's inbox.
-        
+
         Args:
             username: The username to check.
-            
+
         Returns:
             The number of messages in the user's inbox.
         """
@@ -285,12 +285,11 @@ class Database:
             db_connection.commit()
             no_of_messages = db_cursor.fetchall()
             return len(no_of_messages)
-        except:
+        except BaseException:
             raise KeyError(f"User {username} does not exist")
         finally:
             if db_connection and db_cursor:
                 self.close_db(db_connection, db_cursor)
-
 
     def check_value(self, query, params=None):
         try:
@@ -302,16 +301,15 @@ class Database:
             db_connection.commit()
             value = db_cursor.fetchall()
             return value
-        except:
+        except BaseException:
             raise KeyError(f"Invalid query")
         finally:
             if db_connection and db_cursor:
                 self.close_db(db_connection, db_cursor)
 
-
     def open_db(self):
         """Open and load the database from the JSON file.
-        
+
         Returns:
             The loaded database dictionary.
         """
@@ -321,43 +319,40 @@ class Database:
 
         return self.CONNECTION_POOL.get_connection()
 
-
     def close_db(self, connection, cursor):
         # if connection:
         #     cursor.close()
         #     connection.close()
         self.CONNECTION_POOL.return_connection(connection, cursor)
-                       
-            
+
+
 class DbHelper:
     """High-level database helper providing simplified database operations.
-    
+
     Acts as a facade for the Database class, providing more convenient
     methods for common database operations.
     """
-    
+
     def __init__(self):
         self.db = Database.get_instance()
-        
-        
+
     def get_msg_from_inbox(self, login):
         """Get the next message from a user's inbox.
-        
+
         Args:
             login: The username to get messages for.
-            
+
         Returns:
             A tuple containing the sender and message content.
         """
         return self.db.read_msg_from_inbox(login)
-        
-        
+
     def check_if_registered(self, login):
         """Check if a user is registered in the system.
-        
+
         Args:
             login: The username to check.
-            
+
         Returns:
             True if user is registered, False otherwise.
         """
@@ -365,61 +360,59 @@ class DbHelper:
             return True
         return False
 
-
     def register_new_user(self, login, password):
         """Register a new user in the system.
-        
+
         Args:
             login: The username for the new user.
             password: The password for the new user (should be hashed).
         """
         self.db.add_user_to_db(login, password)
 
-
     def get_stored_password(self, login):
         """Get the stored password for a user.
-        
+
         Args:
             login: The username to get the password for.
-            
+
         Returns:
             The stored password hash or 'False' if user doesn't exist
         """
         return self.db.get_user_password(login)
 
-
     def add_account_type(self, text):
         """Add or update the account type for a user.
-        
+
         Args:
             text: Dictionary containing login and acc_type fields.
-            
+
         Returns:
             True if account type was successfully updated.
         """
-        return self.db.modify_db(text["login"], "account_type", text["acc_type"])
+        return self.db.modify_db(
+            text["login"],
+            "account_type",
+            text["acc_type"])
 
-    
     def add_msg_to_db(self, receiver, sender, message):
         """Add a message to a receiver's inbox.
-        
+
         Args:
             receiver: The username of the message recipient.
             sender: The username of the message sender.
             message: The message content.
-            
+
         Returns:
             True if message was successfully added.
         """
         return self.db.add_msg_to_db(receiver, sender, message)
 
-
     def check_recv_inbox(self, login):
         """Check if a user's inbox has space for new messages.
-        
+
         Args:
             login: The username to check.
-            
+
         Returns:
             True if inbox has less than 5 messages, False otherwise.
         """
