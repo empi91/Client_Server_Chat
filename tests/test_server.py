@@ -1,7 +1,6 @@
-""" Test suite for Server class"""
+"""Test suite for Server class"""
 
 import unittest
-import os
 import time
 import psycopg2
 from datetime import datetime, timedelta
@@ -14,7 +13,7 @@ from connection_pool import ConnectionPool
 
 
 class TestServer(unittest.TestCase):
-    """ Test suite for Server class """
+    """Test suite for Server class"""
 
     def setUp(self):
         """Setting up for testing Server methods"""
@@ -32,8 +31,9 @@ class TestServer(unittest.TestCase):
         self.server.db_helper = DbHelper()
 
         # Set a fixed start time for consistent uptime testing
-        self.server.start_time = datetime.now() - timedelta(days=1, hours=2,
-                                                            minutes=30, seconds=15)
+        self.server.start_time = datetime.now() - timedelta(
+            days=1, hours=2, minutes=30, seconds=15
+        )
 
         # Create a test connection for testing
         self.connection = Connection()
@@ -57,11 +57,13 @@ class TestServer(unittest.TestCase):
                 dbname="postgres",
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT 1 FROM pg_database WHERE datname=%s;", (Database.DB_FILE,))
+                "SELECT 1 FROM pg_database WHERE datname=%s;", (Database.DB_FILE,)
+            )
             db_exists = cursor.fetchone()
             if not db_exists:
                 cursor.execute(f"CREATE DATABASE {Database.DB_FILE};")
@@ -80,7 +82,8 @@ class TestServer(unittest.TestCase):
                 dbname=Database.DB_FILE,
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
 
@@ -103,7 +106,8 @@ class TestServer(unittest.TestCase):
                 dbname=Database.DB_FILE,
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
 
@@ -111,13 +115,13 @@ class TestServer(unittest.TestCase):
             users = [
                 ("testUser1", "testPassword1", "admin"),
                 ("testUser2", "testPassword2", "user"),
-                ("", "testPassword3", "user")
+                ("", "testPassword3", "user"),
             ]
 
             for username, password, account_type in users:
                 cursor.execute(
                     "INSERT INTO users (username, password, account_type) VALUES (%s, %s, %s) ON CONFLICT (username) DO NOTHING",
-                    (username, password, account_type)
+                    (username, password, account_type),
                 )
 
             conn.commit()
@@ -134,13 +138,14 @@ class TestServer(unittest.TestCase):
                 dbname="postgres",
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
             cursor.execute(
                 f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s;",
-                (Database.DB_FILE,
-                 ))
+                (Database.DB_FILE,),
+            )
             cursor.execute(f"DROP DATABASE {Database.DB_FILE};")
         except Exception as e:
             print(f"Error dropping database: {e}")
@@ -166,77 +171,58 @@ class TestServer(unittest.TestCase):
             s = connection.create_connection(is_server=True)
             self.assertIsNotNone(s)
         finally:
-            if hasattr(s, 'close'):
+            if hasattr(s, "close"):
                 s.close()
 
     def test_message_handling(self):
         """Test that different message headers are routed to correct handler methods."""
         # Test Command message
         command_message = Message(
-            "Command",
-            "help",
-            "test_user",
-            self.server.server_host)
-        response = self.server.process_message(
-            command_message, self.connection)
+            "Command", "help", "test_user", self.server.server_host
+        )
+        response = self.server.process_message(command_message, self.connection)
         self.assertEqual(response.header, "Command")
 
         # Test Authentication message
         auth_message = Message(
-            "Authentication", {
-                "login": "test_user", "password": "test_pass"}, "Authenticator", "Server")
+            "Authentication",
+            {"login": "test_user", "password": "test_pass"},
+            "Authenticator",
+            "Server",
+        )
         response = self.server.process_message(auth_message, self.connection)
         self.assertEqual(response.header, "Authentication_answer")
 
         # Test invalid header
         invalid_message = Message(
-            "InvalidHeader",
-            "test",
-            "test_user",
-            self.server.server_host)
-        response = self.server.process_message(
-            invalid_message, self.connection)
+            "InvalidHeader", "test", "test_user", self.server.server_host
+        )
+        response = self.server.process_message(invalid_message, self.connection)
         self.assertEqual(response.header, "Error")
         self.assertEqual(response.text, "Invalid message header")
 
     def test_command_handling(self):
-        """ Test all server commands (help, uptime, info, inbox, stop) return correct responses."""
+        """Test all server commands (help, uptime, info, inbox, stop) return correct responses."""
         # Test help command
-        help_msg = Message(
-            "Command",
-            "help",
-            "test_user",
-            self.server.server_host)
+        help_msg = Message("Command", "help", "test_user", self.server.server_host)
         response = self.server.handle_command(help_msg, self.connection)
         self.assertEqual(response.header, "Command")
         self.assertIn("HELP", response.text)
 
         # Test uptime command
-        uptime_msg = Message(
-            "Command",
-            "uptime",
-            "test_user",
-            self.server.server_host)
+        uptime_msg = Message("Command", "uptime", "test_user", self.server.server_host)
         response = self.server.handle_command(uptime_msg, self.connection)
         self.assertEqual(response.header, "Command")
         self.assertIn("Server uptime", response.text)
 
         # Test info command
-        info_msg = Message(
-            "Command",
-            "info",
-            "test_user",
-            self.server.server_host)
+        info_msg = Message("Command", "info", "test_user", self.server.server_host)
         response = self.server.handle_command(info_msg, self.connection)
         self.assertEqual(response.header, "Command")
         self.assertIn("Server version", response.text)
 
         # Test stop command
-        stop_msg = Message(
-            "Command",
-            "stop",
-            "test_user",
-            self.server.server_host)
+        stop_msg = Message("Command", "stop", "test_user", self.server.server_host)
         response = self.server.handle_command(stop_msg, self.connection)
         self.assertEqual(response.header, "Stop")
         self.assertEqual(response.text, "Stop")
@@ -262,11 +248,7 @@ class TestServer(unittest.TestCase):
         """Test complete authentication workflow for both existing and new users."""
         # Test authentication for a new user
         auth_data = {"login": "new_test_user", "password": "test_password"}
-        auth_msg = Message(
-            "Authentication",
-            auth_data,
-            "Authenticator",
-            "Server")
+        auth_msg = Message("Authentication", auth_data, "Authenticator", "Server")
         response = self.server.handle_authentication(auth_msg, self.connection)
 
         self.assertEqual(response.header, "Authentication_answer")
@@ -280,15 +262,10 @@ class TestServer(unittest.TestCase):
     def test_message_sending_validation(self):
         """Test message sending with various scenarios including valid and invalid recipients and empty/full inboxes."""
         # First register a test receiver
-        self.server.db_helper.register_new_user(
-            "test_receiver", "password_hash")
+        self.server.db_helper.register_new_user("test_receiver", "password_hash")
 
         # Test sending message to valid recipient
-        msg = Message(
-            "Message",
-            "Test message content",
-            "testUser1",
-            "test_receiver")
+        msg = Message("Message", "Test message content", "testUser1", "test_receiver")
         response = self.server.handle_sending_message(msg, self.connection)
         self.assertEqual(response.header, "Status")
         # Should be True for successful message sending
@@ -296,10 +273,8 @@ class TestServer(unittest.TestCase):
 
         # Test sending message to non-existent recipient
         msg = Message(
-            "Message",
-            "Test message content",
-            "testUser1",
-            "non_existent_user")
+            "Message", "Test message content", "testUser1", "non_existent_user"
+        )
         response = self.server.handle_sending_message(msg, self.connection)
         self.assertEqual(response.header, "Error")
         self.assertEqual(response.text, "Receiver not existing in database")
@@ -308,10 +283,8 @@ class TestServer(unittest.TestCase):
         """Test that invalid message headers and malformed requests generate proper error responses."""
         # Test invalid message header
         invalid_msg = Message(
-            "InvalidHeader",
-            "test content",
-            "test_sender",
-            self.server.server_host)
+            "InvalidHeader", "test content", "test_sender", self.server.server_host
+        )
         response = self.server.process_message(invalid_msg, self.connection)
 
         self.assertEqual(response.header, "Error")
@@ -321,7 +294,7 @@ class TestServer(unittest.TestCase):
 
 
 class TestUserAuthenticator(unittest.TestCase):
-    """ Test suite for UserAuthenticator class """
+    """Test suite for UserAuthenticator class"""
 
     def setUp(self):
         """Setting up for testing Server methods"""
@@ -339,8 +312,9 @@ class TestUserAuthenticator(unittest.TestCase):
         self.server.db_helper = DbHelper()
 
         # Set a fixed start time for consistent uptime testing
-        self.server.start_time = datetime.now() - timedelta(days=1, hours=2,
-                                                            minutes=30, seconds=15)
+        self.server.start_time = datetime.now() - timedelta(
+            days=1, hours=2, minutes=30, seconds=15
+        )
 
         # Create a test connection for testing
         self.connection = Connection()
@@ -348,10 +322,7 @@ class TestUserAuthenticator(unittest.TestCase):
         # Create test data
         self.test_login = "test_auth_user"
         self.test_password = "test_password"
-        self.message = {
-            "login": self.test_login,
-            "password": self.test_password
-        }
+        self.message = {"login": self.test_login, "password": self.test_password}
 
         # Create authenticator instance
         self.authenticator = UserAuthenticator(self.message)
@@ -376,11 +347,13 @@ class TestUserAuthenticator(unittest.TestCase):
                 dbname="postgres",
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT 1 FROM pg_database WHERE datname=%s;", (Database.DB_FILE,))
+                "SELECT 1 FROM pg_database WHERE datname=%s;", (Database.DB_FILE,)
+            )
             db_exists = cursor.fetchone()
             if not db_exists:
                 cursor.execute(f"CREATE DATABASE {Database.DB_FILE};")
@@ -399,7 +372,8 @@ class TestUserAuthenticator(unittest.TestCase):
                 dbname=Database.DB_FILE,
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
 
@@ -422,7 +396,8 @@ class TestUserAuthenticator(unittest.TestCase):
                 dbname=Database.DB_FILE,
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
 
@@ -430,13 +405,13 @@ class TestUserAuthenticator(unittest.TestCase):
             users = [
                 ("testUser1", "testPassword1", "admin"),
                 ("testUser2", "testPassword2", "user"),
-                ("", "testPassword3", "user")
+                ("", "testPassword3", "user"),
             ]
 
             for username, password, account_type in users:
                 cursor.execute(
                     "INSERT INTO users (username, password, account_type) VALUES (%s, %s, %s) ON CONFLICT (username) DO NOTHING",
-                    (username, password, account_type)
+                    (username, password, account_type),
                 )
 
             conn.commit()
@@ -453,13 +428,14 @@ class TestUserAuthenticator(unittest.TestCase):
                 dbname="postgres",
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
             cursor.execute(
                 f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s;",
-                (Database.DB_FILE,
-                 ))
+                (Database.DB_FILE,),
+            )
             cursor.execute(f"DROP DATABASE {Database.DB_FILE};")
         except Exception as e:
             print(f"Error dropping database: {e}")
@@ -478,8 +454,8 @@ class TestUserAuthenticator(unittest.TestCase):
 
         # Verify the user was actually added to the database
         self.assertTrue(
-            self.authenticator.db_helper.check_if_registered(
-                self.test_login))
+            self.authenticator.db_helper.check_if_registered(self.test_login)
+        )
 
     def test_user_login(self):
         """Test user login process with valid and invalid credentials."""
@@ -494,7 +470,7 @@ class TestUserAuthenticator(unittest.TestCase):
         # Test failed login with incorrect password
         wrong_password_message = {
             "login": self.test_login,
-            "password": "wrong_password"
+            "password": "wrong_password",
         }
         wrong_auth = UserAuthenticator(wrong_password_message)
         auth_result = wrong_auth.verify_login()
@@ -512,13 +488,11 @@ class TestUserAuthenticator(unittest.TestCase):
 
         # Verify password validation works
         self.assertTrue(
-            self.authenticator.verify_password(
-                self.test_password,
-                hashed_password))
+            self.authenticator.verify_password(self.test_password, hashed_password)
+        )
         self.assertFalse(
-            self.authenticator.verify_password(
-                "wrong_password",
-                hashed_password))
+            self.authenticator.verify_password("wrong_password", hashed_password)
+        )
 
     def test_auth_edge_cases(self):
         """Test authentication with empty passwords, very long passwords, and special characters."""
@@ -526,23 +500,18 @@ class TestUserAuthenticator(unittest.TestCase):
         special_password = "p@ssw0rd!#$%"
         special_hash = self.authenticator.hash_password(special_password)
         self.assertTrue(
-            self.authenticator.verify_password(
-                special_password,
-                special_hash))
+            self.authenticator.verify_password(special_password, special_hash)
+        )
 
         # Test with long password
         long_password = "a" * 50  # 50 character password
         long_hash = self.authenticator.hash_password(long_password)
-        self.assertTrue(
-            self.authenticator.verify_password(
-                long_password, long_hash))
+        self.assertTrue(self.authenticator.verify_password(long_password, long_hash))
 
         # Test with empty password
         empty_password = ""
         empty_hash = self.authenticator.hash_password(empty_password)
-        self.assertTrue(
-            self.authenticator.verify_password(
-                empty_password, empty_hash))
+        self.assertTrue(self.authenticator.verify_password(empty_password, empty_hash))
 
 
 if __name__ == "__main__":

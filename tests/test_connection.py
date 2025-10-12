@@ -1,13 +1,12 @@
-""" Test suite for Connection.py class"""
+"""Test suite for Connection.py class"""
 
 import unittest
 import socket
 from connection import Connection
-from config import NetworkConfig
 
 
 class TestConnection(unittest.TestCase):
-    """ Test suite for Connection class """
+    """Test suite for Connection class"""
 
     def setUp(self):
         """Setting up for testing Connection methods"""
@@ -31,7 +30,7 @@ class TestConnection(unittest.TestCase):
         server_socket.close()
 
     def test_socket_creation_failure(self):
-        """ Test error handling when socket creation fails due to system limitations or permissions."""
+        """Test error handling when socket creation fails due to system limitations or permissions."""
         original_socket = socket.socket
 
         try:
@@ -55,12 +54,10 @@ class TestConnection(unittest.TestCase):
         server_socket = self.connection.create_connection(is_server=True)
 
         # Check that SO_REUSEADDR is set
-        option_value = server_socket.getsockopt(
-            socket.SOL_SOCKET, socket.SO_REUSEADDR)
+        option_value = server_socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
         self.assertEqual(
-            option_value,
-            1,
-            "SO_REUSEADDR should be set for server sockets")
+            option_value, 1, "SO_REUSEADDR should be set for server sockets"
+        )
 
         server_socket.close()
 
@@ -68,15 +65,13 @@ class TestConnection(unittest.TestCase):
         """Test that sockets are properly closed when using the connection as a context manager."""
         # Test that Connection implements context management
         self.assertTrue(
-            hasattr(
-                self.connection,
-                '__enter__'),
-            "Connection should implement context management (__enter__)")
+            hasattr(self.connection, "__enter__"),
+            "Connection should implement context management (__enter__)",
+        )
         self.assertTrue(
-            hasattr(
-                self.connection,
-                '__exit__'),
-            "Connection should implement context management (__exit__)")
+            hasattr(self.connection, "__exit__"),
+            "Connection should implement context management (__exit__)",
+        )
 
         # Test actual context management behavior
         with Connection() as conn:
@@ -91,5 +86,5 @@ class TestConnection(unittest.TestCase):
             socket_obj.getsockname()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

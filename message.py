@@ -53,8 +53,7 @@ class Message:
             "Sender": self.sender,
             "Receiver": self.receiver,
         }
-        json_message = json.dumps(
-            text_message, cls=DateTimeEncoder).encode("utf-8")
+        json_message = json.dumps(text_message, cls=DateTimeEncoder).encode("utf-8")
         return json_message
 
     def decode_message(self, json_text) -> bool:

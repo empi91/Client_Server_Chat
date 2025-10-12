@@ -5,7 +5,7 @@ command processing, and communication with the server.
 """
 
 import sys
-import maskpass     # pip install maskpass
+import maskpass  # pip install maskpass
 from datetime import datetime
 from message import Message, ErrorMessage
 from connection import Connection
@@ -71,22 +71,19 @@ class Client:
         match command.lower():
             case "!message":
                 sender = self.name
-                receiver = input(
-                    f"{self.name}>: Please add receiver username: ")
+                receiver = input(f"{self.name}>: Please add receiver username: ")
                 text = input(f"{self.name}>: Please type your message: ")
                 if len(text) > config.message.MAX_MESSAGE_LENGTH:
                     return ErrorMessage(
                         f"Message cannot be longar than {
-                            config.message.MAX_MESSAGE_LENGTH} characters", "Client")
+                            config.message.MAX_MESSAGE_LENGTH} characters",
+                        "Client",
+                    )
                 return Message("Message", text, sender, receiver)
             case "!info":
                 return Message("Command", "info", self.name, self.client_host)
             case "!uptime":
-                return Message(
-                    "Command",
-                    "uptime",
-                    self.name,
-                    self.client_host)
+                return Message("Command", "uptime", self.name, self.client_host)
             case "!help":
                 return Message("Command", "help", self.name, self.client_host)
             case "!stop":
@@ -119,12 +116,12 @@ class Client:
             case "Inbox_message":
                 for message in rec_message.text:
                     dt_object = datetime.fromisoformat(message["Datetime"])
-                    friendly_datetime = dt_object.strftime(
-                        "%b %d, %Y at %I:%M %p")
+                    friendly_datetime = dt_object.strftime("%b %d, %Y at %I:%M %p")
                     print(
                         f"Message from {
                             message['Sender']} sent at: {friendly_datetime}: \n{
-                            message['Text']}")
+                            message['Text']}"
+                    )
 
             case "Error":
                 print(f"[ERROR] {rec_message.text}")
@@ -145,12 +142,15 @@ class Client:
 
         while True:
             self.name = input("Username: ")
-            if len(self.name) < config.security.MIN_USERNAME_LENGTH or len(
-                    self.name) > config.security.MAX_USERNAME_LENGTH:
+            if (
+                len(self.name) < config.security.MIN_USERNAME_LENGTH
+                or len(self.name) > config.security.MAX_USERNAME_LENGTH
+            ):
                 print(
                     f"Username has to be between {
                         config.security.MIN_USERNAME_LENGTH} and {
-                        config.security.MAX_USERNAME_LENGTH} characters, try again.")
+                        config.security.MAX_USERNAME_LENGTH} characters, try again."
+                )
                 continue
 
             password = maskpass.askpass("Password: ")
@@ -158,7 +158,8 @@ class Client:
             if len(password) < config.security.PASSWORD_MIN_LENGTH:
                 print(
                     f"Password has to be at least {
-                        config.security.PASSWORD_MIN_LENGTH} characters long, try again.")
+                        config.security.PASSWORD_MIN_LENGTH} characters long, try again."
+                )
                 continue
 
             if not self.name or not isinstance(self.name, str):
@@ -172,17 +173,12 @@ class Client:
                 "login": self.name,
                 "password": password,
             }
-            message = Message(
-                "Authentication",
-                text,
-                "Authenticator",
-                "Server")
+            message = Message("Authentication", text, "Authenticator", "Server")
             json_message = message.encode_message()
 
             connection.send(json_message)
 
-            auth_answer = connection.recv(
-                config.network.BUFFER_SIZE).decode("utf-8")
+            auth_answer = connection.recv(config.network.BUFFER_SIZE).decode("utf-8")
             auth_message = Message()
             auth_message.decode_message(auth_answer)
 
@@ -209,10 +205,10 @@ class Client:
         Returns:
             True if account type was successfully set, False otherwise.
         """
-        acc_type = input(
-            "New user registered, please add account type: admin/user: ")
+        acc_type = input("New user registered, please add account type: admin/user: ")
         if acc_type not in config.message.VALID_ACCOUNT_TYPES or not isinstance(
-                acc_type, str):
+            acc_type, str
+        ):
             print("[ERROR] Wrong account type")
             return False
 

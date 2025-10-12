@@ -33,8 +33,7 @@ class Connection:
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             if is_server:
-                self.socket.setsockopt(
-                    socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             return self.socket
         except socket.error as s:
             print(f"[SOCKET ERROR]: {s}")

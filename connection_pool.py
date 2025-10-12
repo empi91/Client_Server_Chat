@@ -44,7 +44,8 @@ class ConnectionPool:
             dbname=self.DB_FILE,
             user=self.DB_USER,
             password=self.DB_PASSWORD,
-            port=self.DB_PORT)
+            port=self.DB_PORT,
+        )
         db_cursor = db_connection.cursor()
         return db_connection, db_cursor
 
@@ -58,8 +59,7 @@ class ConnectionPool:
                     self.allocate_db_connections(5)
                     # return self.create_new_connection()
                 else:
-                    raise Exception(
-                        "Maximum number of database connections reached")
+                    raise Exception("Maximum number of database connections reached")
 
             connection_tuple = self.open_connections[0]
             self.open_connections.pop(0)

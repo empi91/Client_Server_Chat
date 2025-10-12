@@ -1,4 +1,4 @@
-""" Test suite for Database and DbHelper classes"""
+"""Test suite for Database and DbHelper classes"""
 
 import unittest
 from db import Database, DbHelper
@@ -9,7 +9,7 @@ import psycopg2
 
 
 class TestDatabase(unittest.TestCase):
-    """ Test suite for Database class """
+    """Test suite for Database class"""
 
     def setUp(self):
         """Setting up for testing Database methods"""
@@ -35,11 +35,13 @@ class TestDatabase(unittest.TestCase):
                 dbname="postgres",
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT 1 FROM pg_database WHERE datname=%s;", (Database.DB_FILE,))
+                "SELECT 1 FROM pg_database WHERE datname=%s;", (Database.DB_FILE,)
+            )
             db_exists = cursor.fetchone()
             if not db_exists:
                 cursor.execute(f"CREATE DATABASE {Database.DB_FILE};")
@@ -58,7 +60,8 @@ class TestDatabase(unittest.TestCase):
                 dbname=Database.DB_FILE,
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
 
@@ -81,7 +84,8 @@ class TestDatabase(unittest.TestCase):
                 dbname=Database.DB_FILE,
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
 
@@ -89,13 +93,13 @@ class TestDatabase(unittest.TestCase):
             users = [
                 ("testUser1", "testPassword1", "admin"),
                 ("testUser2", "testPassword2", "user"),
-                ("", "testPassword3", "user")
+                ("", "testPassword3", "user"),
             ]
 
             for username, password, account_type in users:
                 cursor.execute(
                     "INSERT INTO users (username, password, account_type) VALUES (%s, %s, %s) ON CONFLICT (username) DO NOTHING",
-                    (username, password, account_type)
+                    (username, password, account_type),
                 )
 
             conn.commit()
@@ -112,7 +116,8 @@ class TestDatabase(unittest.TestCase):
                 dbname="postgres",
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
             cursor.execute(f"DROP DATABASE {Database.DB_FILE};")
@@ -135,11 +140,13 @@ class TestDatabase(unittest.TestCase):
             dbname="postgres",
             user=config.database.DB_USER,
             password=config.database.DB_PASSWORD,
-            port=config.database.DB_PORT)
+            port=config.database.DB_PORT,
+        )
         conn.autocommit = True
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT 1 FROM pg_database WHERE datname=%s;", (Database.DB_FILE,))
+            "SELECT 1 FROM pg_database WHERE datname=%s;", (Database.DB_FILE,)
+        )
         db_exists = cursor.fetchone()
         if conn:
             conn.close()
@@ -150,14 +157,18 @@ class TestDatabase(unittest.TestCase):
         db = Database()
 
         # Check that the DB was created
-        conn = psycopg2.connect(host="localhost", dbname="postgres",
-                                user=config.database.DB_USER,
-                                password=config.database.DB_PASSWORD,
-                                port=config.database.DB_PORT)
+        conn = psycopg2.connect(
+            host="localhost",
+            dbname="postgres",
+            user=config.database.DB_USER,
+            password=config.database.DB_PASSWORD,
+            port=config.database.DB_PORT,
+        )
         conn.autocommit = True
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT 1 FROM pg_database WHERE datname=%s;", (Database.DB_FILE,))
+            "SELECT 1 FROM pg_database WHERE datname=%s;", (Database.DB_FILE,)
+        )
         db_exists = cursor.fetchone()
         self.assertTrue(db_exists)
         if conn:
@@ -165,17 +176,22 @@ class TestDatabase(unittest.TestCase):
 
         # Check if database has proper tables inserted into newly created
         # database
-        conn = psycopg2.connect(host="localhost", dbname=Database.DB_FILE,
-                                user=config.database.DB_USER,
-                                password=config.database.DB_PASSWORD,
-                                port=config.database.DB_PORT)
+        conn = psycopg2.connect(
+            host="localhost",
+            dbname=Database.DB_FILE,
+            user=config.database.DB_USER,
+            password=config.database.DB_PASSWORD,
+            port=config.database.DB_PORT,
+        )
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT table_name
             FROM information_schema.tables
             WHERE table_schema = 'public'
             ORDER BY table_name;
-        """)
+        """
+        )
         conn.commit()
 
         # Extract table names from tuples
@@ -190,13 +206,13 @@ class TestDatabase(unittest.TestCase):
             conn.close()
 
     def test_adding_user_to_db(self):
-        """Testing adding new users with different account types to database. """
+        """Testing adding new users with different account types to database."""
         # TODO Add adding default messages to test database
 
         check_no_of_users_query = """SELECT username FROM users;"""
         test_users = [
             ("TestUser4", "TestPassword4", "admin"),
-            ("TestUser5", "TestPassword5", "user")
+            ("TestUser5", "TestPassword5", "user"),
         ]
 
         db = Database()
@@ -213,16 +229,16 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(len(db.check_value(check_no_of_users_query)), 5)
 
         for username, password, account_type in test_users:
-            check_user_acc_type_query = """SELECT account_type FROM users WHERE username=%s"""
+            check_user_acc_type_query = (
+                """SELECT account_type FROM users WHERE username=%s"""
+            )
             self.assertEqual(
-                db.check_value(
-                    check_user_acc_type_query,
-                    (username,
-                     ))[0][0],
-                account_type)
+                db.check_value(check_user_acc_type_query, (username,))[0][0],
+                account_type,
+            )
 
     def test_check_user_in_db(self):
-        """Test user existence checking with valid usernames, non-existent users, and edge cases like empty strings. """
+        """Test user existence checking with valid usernames, non-existent users, and edge cases like empty strings."""
 
         db = Database()
 
@@ -231,36 +247,30 @@ class TestDatabase(unittest.TestCase):
         self.assertFalse(db.check_user_in_db("nonExistingUser"))
 
     def test_get_user_password(self):
-        """Testing retrieval of user passwords for existing users and non-existent users. """
+        """Testing retrieval of user passwords for existing users and non-existent users."""
         db = Database()
 
         self.assertEqual(db.get_user_password("testUser1"), "testPassword1")
-        self.assertFalse(
-            db.get_user_password("nonExistingUser"),
-            "testPassword1")
+        self.assertFalse(db.get_user_password("nonExistingUser"), "testPassword1")
 
     def test_modify_db_valid_operations(self):
         """
         Testing modifying user data with valid operations like changing account types.
         Testing modifying user data with invalid operations like non-existent users or non-existin fields.
         """
-        check_user_acc_type_query = """SELECT account_type FROM users WHERE username=%s"""
+        check_user_acc_type_query = (
+            """SELECT account_type FROM users WHERE username=%s"""
+        )
         db = Database()
 
         # Valid operations
         self.assertEqual(
-            db.check_value(
-                check_user_acc_type_query,
-                ("testUser1",
-                 ))[0][0],
-            "admin")
+            db.check_value(check_user_acc_type_query, ("testUser1",))[0][0], "admin"
+        )
         self.assertTrue(db.modify_db("testUser1", "account_type", "user"))
         self.assertEqual(
-            db.check_value(
-                check_user_acc_type_query,
-                ("testUser1",
-                 ))[0][0],
-            "user")
+            db.check_value(check_user_acc_type_query, ("testUser1",))[0][0], "user"
+        )
 
         # Invalid operations
         with self.assertRaises(ValueError):
@@ -270,7 +280,7 @@ class TestDatabase(unittest.TestCase):
             db.modify_db("Non Existing User", "account_type", "admin")
 
     def test_inbox_operations(self):
-        """ Test adding messages, reading messages, checking inbox size, and overflowing user inbox. """
+        """Test adding messages, reading messages, checking inbox size, and overflowing user inbox."""
         db = Database()
         test_sender = "testUser2"
         test_messages = ["First Message", "Second Message", "Third Message"]
@@ -301,7 +311,7 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(db.check_user_inbox("testUser1"), 0)
 
     def test_inbox_size_limit(self):
-        """Testing inbox size limit enforcement and behavior when limit is reached. """
+        """Testing inbox size limit enforcement and behavior when limit is reached."""
         db = Database()
         for i in range(6):
             if i < 5:
@@ -313,7 +323,7 @@ class TestDatabase(unittest.TestCase):
 
 
 class TestDbHelper(unittest.TestCase):
-    """ Test suite for DbHelper class """
+    """Test suite for DbHelper class"""
 
     def setUp(self):
         """Setting up for testing DbHelper methods"""
@@ -340,11 +350,13 @@ class TestDbHelper(unittest.TestCase):
                 dbname="postgres",
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT 1 FROM pg_database WHERE datname=%s;", (Database.DB_FILE,))
+                "SELECT 1 FROM pg_database WHERE datname=%s;", (Database.DB_FILE,)
+            )
             db_exists = cursor.fetchone()
             if not db_exists:
                 cursor.execute(f"CREATE DATABASE {Database.DB_FILE};")
@@ -363,7 +375,8 @@ class TestDbHelper(unittest.TestCase):
                 dbname=Database.DB_FILE,
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
 
@@ -386,7 +399,8 @@ class TestDbHelper(unittest.TestCase):
                 dbname=Database.DB_FILE,
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
 
@@ -394,13 +408,13 @@ class TestDbHelper(unittest.TestCase):
             users = [
                 ("testUser1", "testPassword1", "user"),
                 ("testUser2", "testPassword2", "user"),
-                ("testUser3", "testPassword3", "user")
+                ("testUser3", "testPassword3", "user"),
             ]
 
             for username, password, account_type in users:
                 cursor.execute(
                     "INSERT INTO users (username, password, account_type) VALUES (%s, %s, %s) ON CONFLICT (username) DO NOTHING",
-                    (username, password, account_type)
+                    (username, password, account_type),
                 )
 
             conn.commit()
@@ -417,7 +431,8 @@ class TestDbHelper(unittest.TestCase):
                 dbname="postgres",
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
             cursor.execute(f"DROP DATABASE {Database.DB_FILE};")
@@ -443,15 +458,15 @@ class TestDbHelper(unittest.TestCase):
         # Verify user was added correctly
         self.assertTrue(self.db_helper.check_if_registered("newTestUser"))
         self.assertEqual(
-            self.db_helper.get_stored_password("newTestUser"),
-            "newTestPassword")
+            self.db_helper.get_stored_password("newTestUser"), "newTestPassword"
+        )
 
     def test_get_stored_password(self):
         """Testing password retrieval for existing users through DbHelper facade."""
         # Test password retrieval for existing user
         self.assertEqual(
-            self.db_helper.get_stored_password("testUser1"),
-            "testPassword1")
+            self.db_helper.get_stored_password("testUser1"), "testPassword1"
+        )
 
         # Test password retrieval for non-existing user
         self.assertFalse(self.db_helper.get_stored_password("nonExistingUser"))
@@ -460,7 +475,8 @@ class TestDbHelper(unittest.TestCase):
         """Testing account type addition and modification for users with valid account types."""
         # Test modifying account type for existing user
         result = self.db_helper.add_account_type(
-            {"login": "testUser1", "acc_type": "admin"})
+            {"login": "testUser1", "acc_type": "admin"}
+        )
         self.assertTrue(result)
 
         # Verify that account type was updated using PostgreSQL query
@@ -470,10 +486,12 @@ class TestDbHelper(unittest.TestCase):
                 dbname=Database.DB_FILE,
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT account_type FROM users WHERE username = %s", ("testUser1",))
+                "SELECT account_type FROM users WHERE username = %s", ("testUser1",)
+            )
             account_type = cursor.fetchone()[0]
             self.assertEqual(account_type, "admin")
         finally:
@@ -485,13 +503,15 @@ class TestDbHelper(unittest.TestCase):
         # Test with non-existent user
         with self.assertRaises(Exception):
             self.db_helper.add_account_type(
-                {"login": "nonExistingUser", "acc_type": "admin"})
+                {"login": "nonExistingUser", "acc_type": "admin"}
+            )
 
     def test_add_msg_to_db(self):
         """Testing message addition to user inbox through DbHelper interface."""
         # Add a test message
         result = self.db_helper.add_msg_to_db(
-            "testUser1", "testUser2", "Test message content")
+            "testUser1", "testUser2", "Test message content"
+        )
         self.assertTrue(result)
 
         # Verify message was added correctly
@@ -502,16 +522,14 @@ class TestDbHelper(unittest.TestCase):
 
         # Test adding to non-existent user
         with self.assertRaises(Exception):
-            self.db_helper.add_msg_to_db(
-                "nonExistingUser", "testUser2", "Test message")
+            self.db_helper.add_msg_to_db("nonExistingUser", "testUser2", "Test message")
 
     def test_get_msg_from_inbox(self):
         """Testing message retrieval from user inbox with FIFO ordering through DbHelper."""
         # Add multiple messages in a specific order
         test_messages = ["First Message", "Second Message"]
         self.db_helper.add_msg_to_db("testUser1", "testUser2", "First Message")
-        self.db_helper.add_msg_to_db(
-            "testUser1", "testUser2", "Second Message")
+        self.db_helper.add_msg_to_db("testUser1", "testUser2", "Second Message")
 
         # Test FIFO order retrieval
         messages = self.db_helper.get_msg_from_inbox("testUser1")
@@ -532,8 +550,7 @@ class TestDbHelper(unittest.TestCase):
 
         # Add 4 messages (below the limit of 5)
         for i in range(4):
-            self.db_helper.add_msg_to_db(
-                "testUser1", "testUser2", f"Message {i}")
+            self.db_helper.add_msg_to_db("testUser1", "testUser2", f"Message {i}")
 
         # Inbox with 4 messages should still have capacity
         self.assertTrue(self.db_helper.check_recv_inbox("testUser1"))
@@ -568,10 +585,8 @@ class TestDbHelper(unittest.TestCase):
         direct_recipient = "testUser2"
         helper_recipient = "testUser3"
 
-        self.db_helper.db.add_msg_to_db(
-            direct_recipient, "testUser1", test_message)
-        self.db_helper.add_msg_to_db(
-            helper_recipient, "testUser1", test_message)
+        self.db_helper.db.add_msg_to_db(direct_recipient, "testUser1", test_message)
+        self.db_helper.add_msg_to_db(helper_recipient, "testUser1", test_message)
 
         # Verify both messages were added correctly
         db_messages = self.db_helper.db.read_msg_from_inbox(direct_recipient)
@@ -588,5 +603,5 @@ class TestDbHelper(unittest.TestCase):
             self.assertEqual(mess["Text"], test_message)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

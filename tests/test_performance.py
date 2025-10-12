@@ -2,10 +2,6 @@
 
 import unittest
 import time
-import os
-import socket
-import resource  # Standard library for resource usage
-import shutil
 import psycopg2
 import random
 import threading
@@ -13,7 +9,6 @@ import string
 from db import Database, DbHelper
 from server import Server
 from client import Client
-from message import Message
 from connection import Connection
 from config import config
 from connection_pool import ConnectionPool
@@ -56,7 +51,8 @@ class TestPerformance(unittest.TestCase):
                 dbname="postgres",
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
             cursor.execute(
@@ -79,7 +75,8 @@ class TestPerformance(unittest.TestCase):
                 dbname=Database.DB_FILE,
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
 
@@ -102,7 +99,8 @@ class TestPerformance(unittest.TestCase):
                 dbname=Database.DB_FILE,
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
 
@@ -110,13 +108,13 @@ class TestPerformance(unittest.TestCase):
             users = [
                 ("testUser1", "testPassword1", "admin"),
                 ("testUser2", "testPassword2", "user"),
-                ("", "testPassword3", "user")
+                ("", "testPassword3", "user"),
             ]
 
             for username, password, account_type in users:
                 cursor.execute(
                     "INSERT INTO users (username, password, account_type) VALUES (%s, %s, %s) ON CONFLICT (username) DO NOTHING",
-                    (username, password, account_type)
+                    (username, password, account_type),
                 )
 
             conn.commit()
@@ -133,7 +131,8 @@ class TestPerformance(unittest.TestCase):
                 dbname="postgres",
                 user=config.database.DB_USER,
                 password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT)
+                port=config.database.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
             cursor.execute(f"DROP DATABASE {Database.DB_FILE};")
@@ -235,25 +234,30 @@ class TestPerformance(unittest.TestCase):
         def sim_user_behaviour():
             username = random.choice(user_pool)
             while not stop_event.is_set():
-                operation = random.choice(['send',
-                                           'send',
-                                           'send',
-                                           'send',
-                                           'send',
-                                           'send',
-                                           'check',
-                                           'check',
-                                           'check',
-                                           'check'])
-                if operation == 'send':
+                operation = random.choice(
+                    [
+                        "send",
+                        "send",
+                        "send",
+                        "send",
+                        "send",
+                        "send",
+                        "check",
+                        "check",
+                        "check",
+                        "check",
+                    ]
+                )
+                if operation == "send":
                     db.add_msg_to_db(
                         random.choice(user_pool),
                         username,
-                        ''.join(
+                        "".join(
                             random.choices(
-                                string.ascii_uppercase +
-                                string.digits,
-                                k=100)))
+                                string.ascii_uppercase + string.digits, k=100
+                            )
+                        ),
+                    )
                 else:
                     db.read_msg_from_inbox(username)
                 time.sleep(random.uniform(1, 5))
@@ -366,5 +370,7 @@ class TestPerformance(unittest.TestCase):
     #                    f"Memory increase is too high: {memory_increase:.2f} MB")
     #     self.assertLess(operation_time, 15.0,
     # f"Operations took too long: {operation_time:.6f} seconds")
+
+
 if __name__ == "__main__":
     unittest.main()

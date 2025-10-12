@@ -1,9 +1,6 @@
 """Test suite for Client class"""
 
-
 import unittest
-import sys
-import io
 from unittest.mock import patch
 from client import Client
 from config import config
@@ -58,7 +55,7 @@ class TestClient(unittest.TestCase):
         self.assertEqual(message.header, "Command")
         self.assertEqual(message.text, "inbox")
 
-    @patch('builtins.input', side_effect=["recipient", "Hello world"])
+    @patch("builtins.input", side_effect=["recipient", "Hello world"])
     def test_input_validation(self, mock_input):
         """Test client-side validation for message length, username length, and password requirements."""
         connection = Connection()
@@ -72,8 +69,10 @@ class TestClient(unittest.TestCase):
         self.assertEqual(message.receiver, "recipient")
 
         # Reset the mock inputs for next test
-        mock_input.side_effect = ["recipient", "A" *
-                                  (config.message.MAX_MESSAGE_LENGTH + 1)]
+        mock_input.side_effect = [
+            "recipient",
+            "A" * (config.message.MAX_MESSAGE_LENGTH + 1),
+        ]
 
         # Test message too long
         message = self.client.check_input_command("!message")
@@ -81,7 +80,9 @@ class TestClient(unittest.TestCase):
         self.assertEqual(message.header, "Error")
         self.assertTrue(
             f"Message cannot be longar than {
-                config.message.MAX_MESSAGE_LENGTH} characters" in message.text)
+                config.message.MAX_MESSAGE_LENGTH} characters"
+            in message.text
+        )
 
     def test_error_message_creation(self):
         """Test that invalid commands generate proper ErrorMessage objects instead of sending invalid requests."""
@@ -94,7 +95,7 @@ class TestClient(unittest.TestCase):
         self.assertEqual(message.text, "Wrong command, try again!")
         self.assertEqual(message.sender, "Server")
 
-    @patch('builtins.input', side_effect=["admin", "superuser"])
+    @patch("builtins.input", side_effect=["admin", "superuser"])
     def test_account_type_selection(self, mock_input):
         """Test that users can select between different account types (e.g., user, admin) during registration."""
         # Test with valid account type 'admin'
@@ -108,8 +109,8 @@ class TestClient(unittest.TestCase):
             def recv(self, size):
                 # Create a mock successful response
                 response_msg = Message(
-                    "Account_type_update", {
-                        "update_status": True}, "Server", "Client")
+                    "Account_type_update", {"update_status": True}, "Server", "Client"
+                )
                 return response_msg.encode_message()
 
         dummy_connection = DummyConnection()
@@ -129,31 +130,34 @@ class TestClient(unittest.TestCase):
         username = "a"  # Too short
         self.assertTrue(
             len(username) < config.security.MIN_USERNAME_LENGTH,
-            "Username should be considered too short"
+            "Username should be considered too short",
         )
 
         username = "a" * (config.security.MAX_USERNAME_LENGTH + 1)  # Too long
         self.assertTrue(
             len(username) > config.security.MAX_USERNAME_LENGTH,
-            "Username should be considered too long"
+            "Username should be considered too long",
         )
 
         username = "valid_user"  # Valid length
         self.assertTrue(
-            config.security.MIN_USERNAME_LENGTH <= len(username) <= config.security.MAX_USERNAME_LENGTH,
-            "Username should be considered valid length")
+            config.security.MIN_USERNAME_LENGTH
+            <= len(username)
+            <= config.security.MAX_USERNAME_LENGTH,
+            "Username should be considered valid length",
+        )
 
         # Test password validation
         password = "123"  # Too short
         self.assertTrue(
             len(password) < config.security.PASSWORD_MIN_LENGTH,
-            "Password should be considered too short"
+            "Password should be considered too short",
         )
 
         password = "password123"  # Valid length
         self.assertTrue(
             len(password) >= config.security.PASSWORD_MIN_LENGTH,
-            "Password should be considered valid length"
+            "Password should be considered valid length",
         )
 
         # Test account type validation

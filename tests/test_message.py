@@ -3,7 +3,6 @@
 import unittest
 import json
 import os
-import sys
 
 # Add parent directory to path to import message module
 # sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -18,8 +17,8 @@ class TestMessage(unittest.TestCase):
         """Set up test fixtures before each test method."""
         # Load sample data from fixtures
         fixtures_path = config.tests.FIXTURES_PATH
-        sample_message = os.path.join(fixtures_path, 'test_messages.json')
-        with open(sample_message, 'r') as f:
+        sample_message = os.path.join(fixtures_path, "test_messages.json")
+        with open(sample_message, "r") as f:
             self.sample_data = json.load(f)
 
     def test_message_encoding_and_decoding(self):
@@ -29,7 +28,7 @@ class TestMessage(unittest.TestCase):
             header="Message",
             text="Hello, how are you?",
             sender="TestUser1",
-            receiver="TestUser2"
+            receiver="TestUser2",
         )
 
         # Encode the message
@@ -37,7 +36,7 @@ class TestMessage(unittest.TestCase):
 
         # Verify it's valid JSON bytes
         self.assertIsInstance(encoded_bytes, bytes)
-        decoded_json = json.loads(encoded_bytes.decode('utf-8'))
+        decoded_json = json.loads(encoded_bytes.decode("utf-8"))
 
         # Verify JSON structure
         expected_keys = {"Header", "Message", "Sender", "Receiver"}
@@ -45,7 +44,7 @@ class TestMessage(unittest.TestCase):
 
         # Create new message and decode
         new_message = Message()
-        result = new_message.decode_message(encoded_bytes.decode('utf-8'))
+        result = new_message.decode_message(encoded_bytes.decode("utf-8"))
 
         # Verify decoding success
         self.assertTrue(result)
@@ -68,7 +67,7 @@ class TestMessage(unittest.TestCase):
 
         # Test encoding
         encoded_bytes = error_msg.encode_message()
-        decoded_json = json.loads(encoded_bytes.decode('utf-8'))
+        decoded_json = json.loads(encoded_bytes.decode("utf-8"))
 
         # Verify error message structure
         self.assertEqual(decoded_json["Header"], "Error")
@@ -97,5 +96,5 @@ class TestMessage(unittest.TestCase):
             message.decode_message(incomplete_json)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

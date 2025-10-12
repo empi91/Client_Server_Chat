@@ -4,8 +4,6 @@ This module provides classes for managing user data and messages in a JSON file-
 database system. It handles user authentication, message storage, and data persistence.
 """
 
-import json
-import os
 import psycopg2
 from config import config
 from connection_pool import ConnectionPool
@@ -40,17 +38,20 @@ class Database:
         self.create_db_tables()
 
     def initialize_db(self):
+        conn = None
         try:
             conn = psycopg2.connect(
                 host="localhost",
                 dbname="postgres",
                 user=self.DB_USER,
                 password=self.DB_PASSWORD,
-                port=self.DB_PORT)
+                port=self.DB_PORT,
+            )
             conn.autocommit = True
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT 1 FROM pg_database WHERE datname=%s;", (self.DB_FILE,))
+                "SELECT 1 FROM pg_database WHERE datname=%s;", (self.DB_FILE,)
+            )
             db_exists = cursor.fetchone()
 
             if not db_exists:
@@ -85,7 +86,7 @@ class Database:
             True if user exists, False otherwise.
         """
         try:
-            check_user_query = '''SELECT username FROM users WHERE username = %s;'''
+            check_user_query = """SELECT username FROM users WHERE username = %s;"""
             check_user_values = (username,)
             db_connection, db_cursor = self.open_db()
             db_cursor.execute(check_user_query, (check_user_values,))
@@ -135,10 +136,17 @@ class Database:
         Returns:
             True if user was successfully added.
         """
-        add_user_query = '''INSERT INTO users (username, password, account_type) VALUES (%s,%s,%s);'''
+        add_user_query = """INSERT INTO users (username, password, account_type) VALUES (%s,%s,%s);"""
         try:
             db_connection, db_cursor = self.open_db()
-            db_cursor.execute(add_user_query, (login, password, "user",))
+            db_cursor.execute(
+                add_user_query,
+                (
+                    login,
+                    password,
+                    "user",
+                ),
+            )
             db_connection.commit()
             return True
         except BaseException:
@@ -161,10 +169,7 @@ class Database:
         Returns:
             True if modification was successful, False otherwise.
         """
-        allowed_fields = [
-            'password',
-            'account_type',
-            'email']  # Add your valid fields
+        allowed_fields = ["password", "account_type", "email"]  # Add your valid fields
         if field not in allowed_fields:
             raise ValueError(f"Invalid field name: {field}")
 
@@ -186,8 +191,7 @@ class Database:
         except Exception as e:
             if db_connection:
                 db_connection.rollback()
-            raise Exception(
-                f"Unexpected error during database modification: {e}")
+            raise Exception(f"Unexpected error during database modification: {e}")
 
         finally:
             if db_connection and db_cursor:
@@ -212,14 +216,20 @@ class Database:
                             );"""
         try:
             db_connection, db_cursor = self.open_db()
-            db_cursor.execute(add_msg_query, (sender, username, message,))
+            db_cursor.execute(
+                add_msg_query,
+                (
+                    sender,
+                    username,
+                    message,
+                ),
+            )
             db_connection.commit()
             return True
         except Exception as e:
             if db_connection:
                 db_connection.rollback()
-            raise Exception(
-                f"Unexpected error during database modification: {e}")
+            raise Exception(f"Unexpected error during database modification: {e}")
 
         finally:
             if db_connection and db_cursor:
@@ -389,10 +399,7 @@ class DbHelper:
         Returns:
             True if account type was successfully updated.
         """
-        return self.db.modify_db(
-            text["login"],
-            "account_type",
-            text["acc_type"])
+        return self.db.modify_db(text["login"], "account_type", text["acc_type"])
 
     def add_msg_to_db(self, receiver, sender, message):
         """Add a message to a receiver's inbox.
