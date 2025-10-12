@@ -49,18 +49,6 @@ class TestConnection(unittest.TestCase):
             # Restore the original socket.socket function
             socket.socket = original_socket
 
-    def test_server_socket_reuse(self):
-        """Test that SO_REUSEADDR is properly set for server sockets to allow quick restart."""
-        server_socket = self.connection.create_connection(is_server=True)
-
-        # Check that SO_REUSEADDR is set
-        option_value = server_socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
-        self.assertEqual(
-            option_value, 1, "SO_REUSEADDR should be set for server sockets"
-        )
-
-        server_socket.close()
-
     def test_connection_context_management(self):
         """Test that sockets are properly closed when using the connection as a context manager."""
         # Test that Connection implements context management

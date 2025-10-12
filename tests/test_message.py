@@ -13,14 +13,6 @@ from config import config
 class TestMessage(unittest.TestCase):
     """Test cases for the Message class."""
 
-    def setUp(self):
-        """Set up test fixtures before each test method."""
-        # Load sample data from fixtures
-        fixtures_path = config.tests.FIXTURES_PATH
-        sample_message = os.path.join(fixtures_path, "test_messages.json")
-        with open(sample_message, "r") as f:
-            self.sample_data = json.load(f)
-
     def test_message_encoding_and_decoding(self):
         """Test basic message encoding and decoding functionality."""
         # Create a message with all fields
@@ -80,7 +72,7 @@ class TestMessage(unittest.TestCase):
         message = Message()
 
         # Test with invalid JSON
-        invalid_json = self.sample_data["invalid_json"]
+        invalid_json = '{"Header": "Message", "Message": "Hello", }'
         result = message.decode_message(invalid_json)
 
         # Verify decode failure
