@@ -6,12 +6,16 @@ import psycopg2
 import random
 import threading
 import string
+import socket
+import resource
+from asciichartpy import plot
 from db import Database, DbHelper
 from server import Server
 from client import Client
 from connection import Connection
 from config import config
 from connection_pool import ConnectionPool
+from message import Message
 
 
 class TestPerformance(unittest.TestCase):
@@ -142,6 +146,26 @@ class TestPerformance(unittest.TestCase):
             if conn:
                 conn.close()
 
+    def _print_connection_chart(self, data):
+        """Print a simple ASCII chart showing connection count over time using asciichartpy."""
+        if not data:
+            print("No connection data to display")
+            return
+        
+        print("Connection Pool Usage Over Time:")
+        print("=" * 50)
+        
+        # Create the chart using asciichartpy
+        chart = plot(data, {'height': 15, 'format': '{:8.0f}'})
+        print(chart)
+        
+        # Print additional information
+        print(f"Time: 0s -> {len(data)}s (1 sample per second)")
+        print(f"Range: {min(data)} - {max(data)} connections")
+        print(f"Average: {sum(data)/len(data):.1f} connections")
+        print()
+
+
     # def test_large_message_handling(self):
     #     """Test the performance of sending large messages from client to server (assiming there is no limit implemented)."""
     #     # Create a large message of varying sizes
@@ -176,6 +200,7 @@ class TestPerformance(unittest.TestCase):
     #                        f"Encoding {size} characters took too long: {encoding_time:.6f} seconds")
     #     print("-------------------------")
 
+
     # def test_database_query_performance(self):
     #     """Test database operations with large numbers of users and messages."""
     #     # Create a database instance
@@ -184,8 +209,7 @@ class TestPerformance(unittest.TestCase):
 
     #     # Test user addition performance
     #     start_time = time.time()
-    # num_users = 100  # Adjust based on what's reasonable for your
-    # application
+    #     num_users = 100  # Adjust based on what's reasonable for your application
 
     #     for i in range(num_users):
     #         username = f"perfTestUser{i}"
@@ -215,21 +239,47 @@ class TestPerformance(unittest.TestCase):
     #     # Basic assertions
     #     self.assertLess(user_add_time/num_users, 0.05,
     #                    f"Adding users is too slow: {user_add_time/num_users:.6f} seconds per user")
-    #     self.assertLess(message_add_time/num_messages, 0.02,
-    # f"Adding messages is too slow: {message_add_time/num_messages:.6f}
-    # seconds per message")
+    #     self.assertLess(message_add_time/num_messages, 0.02, f"Adding messages is too slow: {message_add_time/num_messages:.6f} seconds per message")
+
 
     def test_perform_concurrent_operations(self):
         """Test for stress testing the connection pool class with few minutes of high intense, concurrent operations from various users,
         checking program behavious under pressure"""
-        test_duration = 180
-        num_threads = 150
+        start_time = time.time()
+        test_duration = 35
+        num_threads = 500
         stop_event = threading.Event()
 
         db = Database()
-        db_helper = DbHelper()
         user_pool = [f"stressTestUser{i}" for i in range(30)]
         threads = []
+        self.current_no_of_connections = []
+        self.max_no_of_connections = 0
+        self.sending_requests = 0
+        self.reading_requests = 0
+
+        check_no_of_users_query = """SELECT username FROM users;"""
+
+
+        def logging():
+            """Logging the behaviour and state of connection pool and other modules"""
+            while not stop_event.is_set():
+                print(f"Time since test start: {int(time.time() - start_time)}")
+                available_connections = len(db.CONNECTION_POOL.open_connections)
+                used_connections = db.CONNECTION_POOL.used_connection
+
+                self.current_no_of_connections.append(available_connections + used_connections)
+                
+                if self.max_no_of_connections < available_connections + used_connections: 
+                    self.max_no_of_connections = available_connections + used_connections
+
+                time.sleep(1)
+
+        def connection_cleanup():
+            while not stop_event.is_set():
+                db.CONNECTION_POOL.check_for_cleanup()
+                time.sleep(10)
+
 
         def sim_user_behaviour():
             username = random.choice(user_pool)
@@ -249,6 +299,7 @@ class TestPerformance(unittest.TestCase):
                     ]
                 )
                 if operation == "send":
+                    self.sending_requests += 1
                     db.add_msg_to_db(
                         random.choice(user_pool),
                         username,
@@ -259,22 +310,53 @@ class TestPerformance(unittest.TestCase):
                         ),
                     )
                 else:
+                    self.reading_requests += 1
                     db.read_msg_from_inbox(username)
-                time.sleep(random.uniform(1, 5))
+                time.sleep(random.uniform(0.1, 1))
 
+        print(f"[DEBUG] Number of users in DB before adding: {len(db.check_value(check_no_of_users_query))}")
         for user in user_pool:
             db.add_user_to_db(user, user)
+        print(f"[DEBUG] Number of users in DB after adding: {len(db.check_value(check_no_of_users_query))}")
 
-        for _ in range(150):
+        logging_thread = threading.Thread(target=logging)
+        logging_thread.start()
+
+        cleaning_thread = threading.Thread(target=connection_cleanup)
+        cleaning_thread.start()
+
+        for _ in range(num_threads):
             t = threading.Thread(target=sim_user_behaviour)
             threads.append(t)
             t.start()
 
         time.sleep(test_duration)
         stop_event.set()
+        
+        active_threads = [t for t in threads if t.is_alive()]
+        print(f"Active threads before join: {len(active_threads)}")
+
+        # Enhanced join with monitoring
+        for i, thread in enumerate(threads):
+            if thread.is_alive():
+                print(f"Waiting for thread {i}...")
+                thread.join(timeout=10)
+                if thread.is_alive():
+                    print(f"⚠️  Thread {i} is stuck!")
+                else:
+                    print(f"✅ Thread {i} completed")
 
         for thread in threads:
             thread.join(timeout=10)
+
+        print("###\n# LOGGING\n###")
+        print(f"Maximum number of connections at one time: {self.max_no_of_connections}")
+        print(f"Number of 'send message' requests: {self.sending_requests}")
+        print(f"Number of 'read message' requests: {self.reading_requests}")
+        print()
+        self._print_connection_chart(self.current_no_of_connections)
+
+
 
     # def test_server_response_time(self):
     #     """Test the time taken by the server to respond to client requests."""
@@ -316,9 +398,7 @@ class TestPerformance(unittest.TestCase):
     #         print(f"Average server response time: {avg_response_time:.6f} seconds")
 
     #         # Basic assertion
-    #         self.assertLess(avg_response_time, 0.5,
-    # f"Average server response time is too slow: {avg_response_time:.6f}
-    # seconds")
+    #         self.assertLess(avg_response_time, 0.5, f"Average server response time is too slow: {avg_response_time:.6f} seconds")
 
     #     except (socket.timeout, ConnectionRefusedError) as e:
     #         # Handle connection errors gracefully
@@ -326,11 +406,11 @@ class TestPerformance(unittest.TestCase):
     #     finally:
     #         s.close()
 
+
     # def test_resource_usage(self):
     #     """Test the resource usage (CPU, memory) of the client and server during operation."""
     #     # Get baseline memory usage
-    # baseline_memory = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss /
-    # 1024  # KB to MB
+    #     baseline_memory = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss /1024  # KB to MB
 
     #     # Create database with test data
     #     db = Database()
@@ -366,10 +446,8 @@ class TestPerformance(unittest.TestCase):
     #     print(f"Operations per second: {num_operations/operation_time:.2f}")
 
     #     # Basic assertions
-    #     self.assertLess(memory_increase, 50.0,
-    #                    f"Memory increase is too high: {memory_increase:.2f} MB")
-    #     self.assertLess(operation_time, 15.0,
-    # f"Operations took too long: {operation_time:.6f} seconds")
+    #     self.assertLess(memory_increase, 350.0, f"Memory increase is too high: {memory_increase:.2f} MB")
+    #     self.assertLess(operation_time, 15.0, f"Operations took too long: {operation_time:.6f} seconds")
 
 
 if __name__ == "__main__":

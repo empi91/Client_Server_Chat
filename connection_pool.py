@@ -25,7 +25,7 @@ class ConnectionPool:
         self.min_connections = 5
         self.max_connections = 100
         self.semaphore = threading.Semaphore(value=self.max_connections)
-        self.clenup_interval = 60
+        self.cleanup_interval = 10
         self.open_connections = []
         self.used_connection = 0
         self.last_cleanup_time = time.time()
@@ -53,26 +53,31 @@ class ConnectionPool:
         """Sharing allocated connections with database peration methods"""
         # If pool is empty, create a new connection directly
         self.semaphore.acquire()
-        with self.lock:
-            if len(self.open_connections) == 0:
-                if self.used_connection < self.max_connections:
-                    self.allocate_db_connections(5)
-                    # return self.create_new_connection()
-                else:
-                    raise Exception("Maximum number of database connections reached")
+        try:
+            with self.lock:
+                available_slots = self.max_connections - self.used_connection
+                if len(self.open_connections) == 0:
+                    if available_slots > 0:
+                        connections_to_create = min(5, available_slots)
+                        self.allocate_db_connections(connections_to_create)
+                    else:
+                        self.semaphore.release()
+                        raise Exception("Maximum number of database connections reached")
 
-            connection_tuple = self.open_connections[0]
-            self.open_connections.pop(0)
-            self.used_connection += 1
-            # print(f"Connections remaining in pool: {len(self.open_connections)}")
-            return connection_tuple[0], connection_tuple[1]
+                connection_tuple = self.open_connections[0]
+                self.open_connections.pop(0)
+                self.used_connection += 1
+                return connection_tuple[0], connection_tuple[1]
+        except Exception as e:
+            self.semaphore.release()
+            print(f"[ERROR] Exception: {e}")
+            raise e
 
     def return_connection(self, db_conn, db_cursor):
         with self.lock:
             if (db_conn, db_cursor) not in self.open_connections:
                 self.open_connections.append((db_conn, db_cursor))
                 self.used_connection -= 1
-            self.close_extra_connections()
             self.semaphore.release()
 
     def close_all_connections(self):
@@ -85,16 +90,35 @@ class ConnectionPool:
     def check_for_cleanup(self):
         """Checking if it's time for connection cleanup"""
         current_time = time.time()
-        if self.start_time - current_time > self.clenup_interval:
+        if current_time - self.last_cleanup_time > self.cleanup_interval:
+            # print("Connections cleanup")
             self.close_extra_connections()
             self.last_cleanup_time = time.time()
 
     def close_extra_connections(self):
         """Close all unused extra connections over the starting 5"""
-        while len(self.open_connections) > self.min_connections:
-            conn, cursor = self.open_connections.pop()
-            cursor.close()
-            conn.close()
+        print(f"Number of available connections BEFORE cleanup: {len(self.open_connections)}")
+        with self.lock:
+            while len(self.open_connections) > self.min_connections:
+                conn, cursor = self.open_connections.pop()
+                cursor.close()
+                conn.close()
+        print(f"Number of available connections AFTER cleanup: {len(self.open_connections)}")
 
-    def close_failing_connection(self):
+    def close_failing_connection(self, db_conn, db_cursor):
         """Close connection in case of error/exception and create new one"""
+        try:
+            if db_cursor:
+                db_cursor.close()
+        except:
+            pass
+
+        try:
+            if db_conn:
+                db_conn.close()
+        except:
+            pass
+
+        with self.lock:
+            self.used_connection -= 1
+            self.semaphore.release()

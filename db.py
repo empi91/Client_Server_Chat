@@ -61,18 +61,24 @@ class Database:
             print(f"Error initializing databse: {e}")
         finally:
             if conn:
-                conn.close
+                conn.close()
 
     def create_db_tables(self):
+        db_connection = None
         try:
             db_connection, db_cursor = self.open_db()
+            if db_connection is None:
+                print("Database connection unavailable - rejecting operation")
+                return
             db_cursor.execute(config.database.CREATE_USER_TABLE_QUERY)
             db_connection.commit()
             db_cursor.execute(config.database.CREATE_MESSAGE_TABLE_QUERY)
             db_connection.commit()
         except Exception as e:
             print(f"Error initializing databse: {e}")
-        finally:
+            if db_connection and db_cursor:
+                self.CONNECTION_POOL.close_failing_connection(db_connection, db_cursor)
+        else:
             if db_connection and db_cursor:
                 self.close_db(db_connection, db_cursor)
 
@@ -85,24 +91,30 @@ class Database:
         Returns:
             True if user exists, False otherwise.
         """
+        db_connection = None
+        db_cursor = None
         try:
             check_user_query = """SELECT username FROM users WHERE username = %s;"""
-            check_user_values = (username,)
+
             db_connection, db_cursor = self.open_db()
-            db_cursor.execute(check_user_query, (check_user_values,))
+            if db_connection is None:
+                print("Database connection unavailable - rejecting operation")
+                return False
+            
+            db_cursor.execute(check_user_query, (username,))
             db_connection.commit()
-            exisitng_username = db_cursor.fetchone()
-            if exisitng_username:
-                if exisitng_username[0] == username:
-                    self.close_db(db_connection, db_cursor)
-                    return True
-            self.close_db(db_connection, db_cursor)
-            return False
+            existing_username = db_cursor.fetchone()
+
+            result = existing_username and existing_username[0] == username
         except Exception as e:
-            print(f"Error initializing databse: {e}")
-        finally:
+            print(f"Error checking user in database: {e}")
+            if db_connection and db_cursor:
+                self.CONNECTION_POOL.close_failing_connection(db_connection, db_cursor)
+            return False
+        else:
             if db_connection and db_cursor:
                 self.close_db(db_connection, db_cursor)
+            return result
 
     def get_user_password(self, username: str) -> str:
         """Retrieve the stored password for a given username.
@@ -113,17 +125,26 @@ class Database:
         Returns:
             The stored password hash for the user.
         """
+        db_connection = None
+        db_cursor = None
         get_password_query = """SELECT password FROM users WHERE username = %s;"""
         try:
             db_connection, db_cursor = self.open_db()
+            if db_connection is None:
+                print("Database connection unavailable - rejecting operation")
+                return False
             db_cursor.execute(get_password_query, (username,))
             db_connection.commit()
-            return db_cursor.fetchone()[0]
-        except BaseException:
+            result = db_cursor.fetchone()[0]
+        except Exception as e:
+            print(f"[ERROR] Error getting user password: {e}")
+            if db_connection and db_cursor:
+                self.CONNECTION_POOL.close_failing_connection(db_connection, db_cursor)
             return False
-        finally:
+        else:
             if db_connection and db_cursor:
                 self.close_db(db_connection, db_cursor)
+            return result
 
     def add_user_to_db(self, login, password, type=None):
         """Add a new user to the database.
@@ -136,9 +157,14 @@ class Database:
         Returns:
             True if user was successfully added.
         """
+        db_connection = None
+        db_cursor = None
         add_user_query = """INSERT INTO users (username, password, account_type) VALUES (%s,%s,%s);"""
         try:
             db_connection, db_cursor = self.open_db()
+            if db_connection is None:
+                print("Database connection unavailable - rejecting operation")
+                return False
             db_cursor.execute(
                 add_user_query,
                 (
@@ -148,12 +174,15 @@ class Database:
                 ),
             )
             db_connection.commit()
-            return True
-        except BaseException:
+        except Exception as e:
+            print(f"[ERROR] Error adding user to database: {e}")
+            if db_connection and db_cursor:
+                self.CONNECTION_POOL.close_failing_connection(db_connection, db_cursor)
             return False
-        finally:
+        else:
             if db_connection and db_cursor:
                 self.close_db(db_connection, db_cursor)
+            return True
 
     def remove_user_from_db(self):
         """Removing user from database"""
@@ -169,6 +198,8 @@ class Database:
         Returns:
             True if modification was successful, False otherwise.
         """
+        db_connection = None
+        db_cursor = None
         allowed_fields = ["password", "account_type", "email"]  # Add your valid fields
         if field not in allowed_fields:
             raise ValueError(f"Invalid field name: {field}")
@@ -177,6 +208,9 @@ class Database:
 
         try:
             db_connection, db_cursor = self.open_db()
+            if db_connection is None:
+                print("Database connection unavailable - rejecting operation")
+                return False
             db_cursor.execute(update_data_query, (value, username))
 
             rows_affected = db_cursor.rowcount
@@ -186,16 +220,19 @@ class Database:
                 raise ValueError(f"User '{username}' not found in database")
 
             db_connection.commit()
-            return True
 
         except Exception as e:
+            print(f"[ERROR] Error modyfing database: {e}")
             if db_connection:
                 db_connection.rollback()
+            if db_connection and db_cursor:
+                self.CONNECTION_POOL.close_failing_connection(db_connection, db_cursor)
             raise Exception(f"Unexpected error during database modification: {e}")
 
-        finally:
+        else:
             if db_connection and db_cursor:
                 self.close_db(db_connection, db_cursor)
+            return True
 
     def add_msg_to_db(self, username, sender, message) -> bool:
         """Add a message to a user's inbox.
@@ -208,6 +245,8 @@ class Database:
         Returns:
             True if message was successfully added, False otherwise.
         """
+        db_connection = None
+        db_cursor = None
         add_msg_query = """INSERT INTO messages (sender_id, receiver_id, content)
                             VALUES (
                             (SELECT id from USERS WHERE username = %s),
@@ -216,6 +255,9 @@ class Database:
                             );"""
         try:
             db_connection, db_cursor = self.open_db()
+            if db_connection is None:
+                print("Database connection unavailable - rejecting operation")
+                return False
             db_cursor.execute(
                 add_msg_query,
                 (
@@ -225,15 +267,18 @@ class Database:
                 ),
             )
             db_connection.commit()
-            return True
         except Exception as e:
+            print(f"[ERROR] Error adding message to database: {e}")
             if db_connection:
                 db_connection.rollback()
+            if db_connection and db_cursor:
+                self.CONNECTION_POOL.close_failing_connection(db_connection, db_cursor)
             raise Exception(f"Unexpected error during database modification: {e}")
 
-        finally:
+        else:
             if db_connection and db_cursor:
                 self.close_db(db_connection, db_cursor)
+            return True
 
     def read_msg_from_inbox(self, username) -> list[str, str]:
         """Read and remove the first message from a user's inbox.
@@ -244,12 +289,17 @@ class Database:
         Returns:
             A list containing al messages from inbox (sender, message) or (username, "EMPTY") if no messages.
         """
+        db_connection = None
+        db_cursor = None
         read_msg_query = """SELECT sender_id, content, timestamp FROM messages WHERE receiver_id = (SELECT id from users WHERE username = %s);"""
         get_username_query = """SELECT username FROM users WHERE id = %s"""
         delete_read_msg_query = """DELETE FROM messages WHERE receiver_id = (SELECT id from users WHERE username = %s);"""
         messages = []
         try:
             db_connection, db_cursor = self.open_db()
+            if db_connection is None:
+                print("Database connection unavailable - rejecting operation")
+                return [{"Sender": username, "Text": "DATABASE_UNAVAILABLE"}]
             db_cursor.execute(read_msg_query, (username,))
             db_connection.commit()
             raw_messages = db_cursor.fetchall()
@@ -266,18 +316,21 @@ class Database:
 
                 db_cursor.execute(delete_read_msg_query, (username,))
                 db_connection.commit()
-                return messages
-            message = {
-                "Sender": username,
-                "Text": "EMPTY",
-            }
-            messages.append(message)
-            return messages
+            else:
+                message = {
+                    "Sender": username,
+                    "Text": "EMPTY",
+                }
+                messages.append(message)
         except Exception as e:
-            print(f"Error initializing databse: {e}")
-        finally:
+            print(f"[ERROR] Error reading message from database: {e}")
+            if db_connection and db_cursor:
+                self.CONNECTION_POOL.close_failing_connection(db_connection, db_cursor)
+            return []
+        else:
             if db_connection and db_cursor:
                 self.close_db(db_connection, db_cursor)
+            return messages
 
     def check_user_inbox(self, username) -> int:
         """Check the number of messages in a user's inbox.
@@ -288,34 +341,52 @@ class Database:
         Returns:
             The number of messages in the user's inbox.
         """
+        db_connection = None
+        db_cursor = None
         check_user_inbox_query = """SELECT * FROM messages WHERE receiver_id = (SELECT id from users WHERE username = %s);"""
         try:
             db_connection, db_cursor = self.open_db()
+            if db_connection is None:
+                print("Database connection unavailable - rejecting operation")
+                return 0
             db_cursor.execute(check_user_inbox_query, (username,))
             db_connection.commit()
             no_of_messages = db_cursor.fetchall()
-            return len(no_of_messages)
-        except BaseException:
+        except Exception as e:
+            print(f"[ERROR] Error checking user inbox: {e}")
+            if db_connection and db_cursor:
+                self.CONNECTION_POOL.close_failing_connection(db_connection, db_cursor)
             raise KeyError(f"User {username} does not exist")
-        finally:
+        else:
             if db_connection and db_cursor:
                 self.close_db(db_connection, db_cursor)
+            return len(no_of_messages)
 
     def check_value(self, query, params=None):
+        """Method for checking some value not covered in previous methods from the database
+        Example: Checking number of registered users for test purposes"""
+        db_connection = None
+        db_cursor = None
         try:
             db_connection, db_cursor = self.open_db()
+            if db_connection is None:
+                print("Database connection unavailable - rejecting operation")
+                return []
             if params:
                 db_cursor.execute(query, params)
             else:
                 db_cursor.execute(query)
             db_connection.commit()
             value = db_cursor.fetchall()
-            return value
-        except BaseException:
-            raise KeyError(f"Invalid query")
-        finally:
+        except Exception as e:
+            print(f"[ERROR] Error accessing value from database: {e}")
+            if db_connection and db_cursor:
+                self.CONNECTION_POOL.close_failing_connection(db_connection, db_cursor)
+            raise KeyError
+        else:
             if db_connection and db_cursor:
                 self.close_db(db_connection, db_cursor)
+            return value
 
     def open_db(self):
         """Open and load the database from the JSON file.
@@ -326,8 +397,11 @@ class Database:
         # db_connection = psycopg2.connect(host="localhost", dbname = self.DB_FILE, user=self.DB_USER, password=self.DB_PASSWORD, port=self.DB_PORT)
         # db_cursor = db_connection.cursor()
         # return db_connection, db_cursor
-
-        return self.CONNECTION_POOL.get_connection()
+        try:
+            return self.CONNECTION_POOL.get_connection()
+        except Exception as e:
+            print("Maximum number of database connections reached")
+            return None, None
 
     def close_db(self, connection, cursor):
         # if connection:
