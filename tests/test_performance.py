@@ -246,8 +246,8 @@ class TestPerformance(unittest.TestCase):
         """Test for stress testing the connection pool class with few minutes of high intense, concurrent operations from various users,
         checking program behavious under pressure"""
         start_time = time.time()
-        test_duration = 35
-        num_threads = 500
+        test_duration = 150
+        num_threads = 200
         stop_event = threading.Event()
 
         db = Database()
