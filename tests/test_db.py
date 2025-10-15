@@ -5,7 +5,7 @@ from db import Database, DbHelper
 from config import config
 from connection_pool import ConnectionPool
 import os
-import psycopg2
+import sqlite3
 
 
 class TestDatabase(unittest.TestCase):
@@ -13,10 +13,10 @@ class TestDatabase(unittest.TestCase):
 
     def setUp(self):
         """Setting up for testing Database methods"""
+        self.drop_test_db()
         self.original_db_path = Database.DB_FILE
         Database.DB_FILE = config.tests.TEST_DB_FILE
         ConnectionPool.DB_FILE = config.tests.TEST_DB_FILE
-        self.init_test_db()
         self.create_test_db_tables()
         self.populate_test_db()
         self.db = Database()
@@ -27,66 +27,34 @@ class TestDatabase(unittest.TestCase):
         Database.DB_FILE = self.original_db_path
         ConnectionPool.DB_FILE = self.original_db_path
 
-    def init_test_db(self):
-        # Create test database
-        try:
-            conn = psycopg2.connect(
-                host="localhost",
-                dbname="postgres",
-                user=config.database.DB_USER,
-                password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT,
-            )
-            conn.autocommit = True
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT 1 FROM pg_database WHERE datname=%s;", (Database.DB_FILE,)
-            )
-            db_exists = cursor.fetchone()
-            if not db_exists:
-                cursor.execute(f"CREATE DATABASE {Database.DB_FILE};")
-                print(f"New database {Database.DB_FILE} created")
-        except Exception as e:
-            print(f"Error initializing database: {e}")
-        finally:
-            if conn:
-                conn.close()
 
     def create_test_db_tables(self):
         # Create tables in database
         try:
-            conn = psycopg2.connect(
-                host="localhost",
-                dbname=Database.DB_FILE,
-                user=config.database.DB_USER,
-                password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT,
-            )
-            conn.autocommit = True
-            cursor = conn.cursor()
+            db_connection = sqlite3.connect(Database.DB_FILE)
+            db_cursor = db_connection.cursor()
 
             # Create the tables using the queries defined in the config
-            cursor.execute(config.database.CREATE_USER_TABLE_QUERY)
-            cursor.execute(config.database.CREATE_MESSAGE_TABLE_QUERY)
+            db_cursor.execute(config.database.CREATE_USER_TABLE_QUERY)
+            db_connection.commit()
+            db_cursor.execute(config.database.CREATE_USER_INDEX_QUERY)
+            db_connection.commit()
+            db_cursor.execute(config.database.CREATE_MESSAGE_TABLE_QUERY)
+            db_connection.commit()
+            db_cursor.execute(config.database.CREATE_MESSAGE_INDEX_QUERY)
+            db_connection.commit()
 
-            conn.commit()
         except Exception as e:
             print(f"Error creating test database tables: {e}")
         finally:
-            if conn:
-                conn.close()
+            if db_connection:
+                db_cursor.close()
+                db_connection.close()
 
     def populate_test_db(self):
         """Populate the test database with test users and data required for tests"""
         try:
-            conn = psycopg2.connect(
-                host="localhost",
-                dbname=Database.DB_FILE,
-                user=config.database.DB_USER,
-                password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT,
-            )
-            conn.autocommit = True
+            conn = sqlite3.connect(Database.DB_FILE)
             cursor = conn.cursor()
 
             # Insert test users
@@ -98,7 +66,7 @@ class TestDatabase(unittest.TestCase):
 
             for username, password, account_type in users:
                 cursor.execute(
-                    "INSERT INTO users (username, password, account_type) VALUES (%s, %s, %s) ON CONFLICT (username) DO NOTHING",
+                    "INSERT INTO users (username, password, account_type) VALUES (?, ?, ?) ON CONFLICT (username) DO NOTHING",
                     (username, password, account_type),
                 )
 
@@ -111,21 +79,9 @@ class TestDatabase(unittest.TestCase):
 
     def drop_test_db(self):
         try:
-            conn = psycopg2.connect(
-                host="localhost",
-                dbname="postgres",
-                user=config.database.DB_USER,
-                password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT,
-            )
-            conn.autocommit = True
-            cursor = conn.cursor()
-            cursor.execute(f"DROP DATABASE {Database.DB_FILE};")
-        except Exception as e:
-            print(f"Error dropping database: {e}")
-        finally:
-            if conn:
-                conn.close()
+            os.remove(Database.DB_FILE)
+        except OSError:
+            pass
 
     def test_database_initialization(self):
         """Testing if Database class creates an empty PostgreSQL database if it doesn't exist.
@@ -135,61 +91,25 @@ class TestDatabase(unittest.TestCase):
 
         self.drop_test_db()
 
-        conn = psycopg2.connect(
-            host="localhost",
-            dbname="postgres",
-            user=config.database.DB_USER,
-            password=config.database.DB_PASSWORD,
-            port=config.database.DB_PORT,
-        )
-        conn.autocommit = True
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT 1 FROM pg_database WHERE datname=%s;", (Database.DB_FILE,)
-        )
-        db_exists = cursor.fetchone()
-        if conn:
-            conn.close()
+        db_exists = os.path.exists(Database.DB_FILE)
 
         self.assertFalse(db_exists)
 
         # Creta Database object
         db = Database()
 
-        # Check that the DB was created
-        conn = psycopg2.connect(
-            host="localhost",
-            dbname="postgres",
-            user=config.database.DB_USER,
-            password=config.database.DB_PASSWORD,
-            port=config.database.DB_PORT,
-        )
-        conn.autocommit = True
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT 1 FROM pg_database WHERE datname=%s;", (Database.DB_FILE,)
-        )
-        db_exists = cursor.fetchone()
+        db_exists = os.path.exists(Database.DB_FILE)
+        # db_exists = cursor.fetchone()
         self.assertTrue(db_exists)
-        if conn:
-            conn.close()
 
-        # Check if database has proper tables inserted into newly created
-        # database
-        conn = psycopg2.connect(
-            host="localhost",
-            dbname=Database.DB_FILE,
-            user=config.database.DB_USER,
-            password=config.database.DB_PASSWORD,
-            port=config.database.DB_PORT,
-        )
+        conn = sqlite3.connect(Database.DB_FILE)
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT table_name
-            FROM information_schema.tables
-            WHERE table_schema = 'public'
-            ORDER BY table_name;
+            SELECT name 
+            FROM sqlite_master 
+            WHERE type='table' 
+            ORDER BY name;
         """
         )
         conn.commit()
@@ -230,7 +150,7 @@ class TestDatabase(unittest.TestCase):
 
         for username, password, account_type in test_users:
             check_user_acc_type_query = (
-                """SELECT account_type FROM users WHERE username=%s"""
+                """SELECT account_type FROM users WHERE username=?"""
             )
             self.assertEqual(
                 db.check_value(check_user_acc_type_query, (username,))[0][0],
@@ -259,7 +179,7 @@ class TestDatabase(unittest.TestCase):
         Testing modifying user data with invalid operations like non-existent users or non-existin fields.
         """
         check_user_acc_type_query = (
-            """SELECT account_type FROM users WHERE username=%s"""
+            """SELECT account_type FROM users WHERE username=?"""
         )
         db = Database()
 
@@ -330,7 +250,6 @@ class TestDbHelper(unittest.TestCase):
         self.original_db_path = Database.DB_FILE
         Database.DB_FILE = config.tests.TEST_DB_FILE
         ConnectionPool.DB_FILE = config.tests.TEST_DB_FILE
-        self.init_test_db()
         self.create_test_db_tables()
         self.populate_test_db()
         self.db_helper = DbHelper()
@@ -342,66 +261,33 @@ class TestDbHelper(unittest.TestCase):
         Database.DB_FILE = self.original_db_path
         ConnectionPool.DB_FILE = self.original_db_path
 
-    def init_test_db(self):
-        # Create test database
-        try:
-            conn = psycopg2.connect(
-                host="localhost",
-                dbname="postgres",
-                user=config.database.DB_USER,
-                password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT,
-            )
-            conn.autocommit = True
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT 1 FROM pg_database WHERE datname=%s;", (Database.DB_FILE,)
-            )
-            db_exists = cursor.fetchone()
-            if not db_exists:
-                cursor.execute(f"CREATE DATABASE {Database.DB_FILE};")
-                print(f"New database {Database.DB_FILE} created")
-        except Exception as e:
-            print(f"Error initializing database: {e}")
-        finally:
-            if conn:
-                conn.close()
-
     def create_test_db_tables(self):
         # Create tables in database
         try:
-            conn = psycopg2.connect(
-                host="localhost",
-                dbname=Database.DB_FILE,
-                user=config.database.DB_USER,
-                password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT,
-            )
-            conn.autocommit = True
-            cursor = conn.cursor()
+            db_connection = sqlite3.connect(Database.DB_FILE)
+            db_cursor = db_connection.cursor()
 
             # Create the tables using the queries defined in the config
-            cursor.execute(config.database.CREATE_USER_TABLE_QUERY)
-            cursor.execute(config.database.CREATE_MESSAGE_TABLE_QUERY)
+            db_cursor.execute(config.database.CREATE_USER_TABLE_QUERY)
+            db_connection.commit()
+            db_cursor.execute(config.database.CREATE_USER_INDEX_QUERY)
+            db_connection.commit()
+            db_cursor.execute(config.database.CREATE_MESSAGE_TABLE_QUERY)
+            db_connection.commit()
+            db_cursor.execute(config.database.CREATE_MESSAGE_INDEX_QUERY)
+            db_connection.commit()
 
-            conn.commit()
         except Exception as e:
             print(f"Error creating test database tables: {e}")
         finally:
-            if conn:
-                conn.close()
+            if db_connection:
+                db_cursor.close()
+                db_connection.close()
 
     def populate_test_db(self):
         """Populate the test database with test users and data required for tests"""
         try:
-            conn = psycopg2.connect(
-                host="localhost",
-                dbname=Database.DB_FILE,
-                user=config.database.DB_USER,
-                password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT,
-            )
-            conn.autocommit = True
+            conn = sqlite3.connect(Database.DB_FILE)
             cursor = conn.cursor()
 
             # Insert test users
@@ -413,7 +299,7 @@ class TestDbHelper(unittest.TestCase):
 
             for username, password, account_type in users:
                 cursor.execute(
-                    "INSERT INTO users (username, password, account_type) VALUES (%s, %s, %s) ON CONFLICT (username) DO NOTHING",
+                    "INSERT INTO users (username, password, account_type) VALUES (?, ?, ?) ON CONFLICT (username) DO NOTHING",
                     (username, password, account_type),
                 )
 
@@ -426,21 +312,9 @@ class TestDbHelper(unittest.TestCase):
 
     def drop_test_db(self):
         try:
-            conn = psycopg2.connect(
-                host="localhost",
-                dbname="postgres",
-                user=config.database.DB_USER,
-                password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT,
-            )
-            conn.autocommit = True
-            cursor = conn.cursor()
-            cursor.execute(f"DROP DATABASE {Database.DB_FILE};")
-        except Exception as e:
-            print(f"Error dropping database: {e}")
-        finally:
-            if conn:
-                conn.close()
+            os.remove(Database.DB_FILE)
+        except OSError:
+                pass
 
     def test_check_if_registered(self):
         """Testing user registration checking through DbHelper facade with existing and non-existing users."""
@@ -481,16 +355,10 @@ class TestDbHelper(unittest.TestCase):
 
         # Verify that account type was updated using PostgreSQL query
         try:
-            conn = psycopg2.connect(
-                host="localhost",
-                dbname=Database.DB_FILE,
-                user=config.database.DB_USER,
-                password=config.database.DB_PASSWORD,
-                port=config.database.DB_PORT,
-            )
+            conn =sqlite3.connect(Database.DB_FILE)
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT account_type FROM users WHERE username = %s", ("testUser1",)
+                "SELECT account_type FROM users WHERE username = ?", ("testUser1",)
             )
             account_type = cursor.fetchone()[0]
             self.assertEqual(account_type, "admin")

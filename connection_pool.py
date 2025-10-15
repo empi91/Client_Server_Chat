@@ -6,7 +6,7 @@ This module provides a connection pool, which:
 - regularly checking if there are unused connections which can be closed;
 """
 
-import psycopg2
+import sqlite3
 import time
 from config import config
 import threading
@@ -39,14 +39,12 @@ class ConnectionPool:
 
     def create_new_connection(self):
         """Creating new connection if required"""
-        db_connection = psycopg2.connect(
-            host="localhost",
-            dbname=self.DB_FILE,
-            user=self.DB_USER,
-            password=self.DB_PASSWORD,
-            port=self.DB_PORT,
-        )
+
+        db_connection = sqlite3.connect(self.DB_FILE, check_same_thread=False)
         db_cursor = db_connection.cursor()
+
+        db_cursor.execute("PRAGMA foreign_keys = ON;")
+
         return db_connection, db_cursor
 
     def get_connection(self):

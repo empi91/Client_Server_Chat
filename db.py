@@ -4,7 +4,7 @@ This module provides classes for managing user data and messages in a JSON file-
 database system. It handles user authentication, message storage, and data persistence.
 """
 
-import psycopg2
+import sqlite3
 from config import config
 from connection_pool import ConnectionPool
 
@@ -33,35 +33,8 @@ class Database:
     def __init__(self):
         """Connect to exisitng PostgreSQL database or create new one"""
 
-        self.initialize_db()
         self.CONNECTION_POOL = ConnectionPool()
         self.create_db_tables()
-
-    def initialize_db(self):
-        conn = None
-        try:
-            conn = psycopg2.connect(
-                host="localhost",
-                dbname="postgres",
-                user=self.DB_USER,
-                password=self.DB_PASSWORD,
-                port=self.DB_PORT,
-            )
-            conn.autocommit = True
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT 1 FROM pg_database WHERE datname=%s;", (self.DB_FILE,)
-            )
-            db_exists = cursor.fetchone()
-
-            if not db_exists:
-                cursor.execute(f"CREATE DATABASE {self.DB_FILE}")
-                print(f"New database {self.DB_FILE} created")
-        except Exception as e:
-            print(f"Error initializing databse: {e}")
-        finally:
-            if conn:
-                conn.close()
 
     def create_db_tables(self):
         db_connection = None
@@ -72,7 +45,11 @@ class Database:
                 return
             db_cursor.execute(config.database.CREATE_USER_TABLE_QUERY)
             db_connection.commit()
+            db_cursor.execute(config.database.CREATE_USER_INDEX_QUERY)
+            db_connection.commit()
             db_cursor.execute(config.database.CREATE_MESSAGE_TABLE_QUERY)
+            db_connection.commit()
+            db_cursor.execute(config.database.CREATE_MESSAGE_INDEX_QUERY)
             db_connection.commit()
         except Exception as e:
             print(f"Error initializing databse: {e}")
@@ -94,7 +71,7 @@ class Database:
         db_connection = None
         db_cursor = None
         try:
-            check_user_query = """SELECT username FROM users WHERE username = %s;"""
+            check_user_query = """SELECT username FROM users WHERE username = ?;"""
 
             db_connection, db_cursor = self.open_db()
             if db_connection is None:
@@ -127,7 +104,7 @@ class Database:
         """
         db_connection = None
         db_cursor = None
-        get_password_query = """SELECT password FROM users WHERE username = %s;"""
+        get_password_query = """SELECT password FROM users WHERE username = ?;"""
         try:
             db_connection, db_cursor = self.open_db()
             if db_connection is None:
@@ -136,6 +113,8 @@ class Database:
             db_cursor.execute(get_password_query, (username,))
             db_connection.commit()
             result = db_cursor.fetchone()[0]
+            if result is None:
+                result = False
         except Exception as e:
             print(f"[ERROR] Error getting user password: {e}")
             if db_connection and db_cursor:
@@ -159,7 +138,7 @@ class Database:
         """
         db_connection = None
         db_cursor = None
-        add_user_query = """INSERT INTO users (username, password, account_type) VALUES (%s,%s,%s);"""
+        add_user_query = """INSERT INTO users (username, password, account_type) VALUES (?,?,?);"""
         try:
             db_connection, db_cursor = self.open_db()
             if db_connection is None:
@@ -200,11 +179,11 @@ class Database:
         """
         db_connection = None
         db_cursor = None
-        allowed_fields = ["password", "account_type", "email"]  # Add your valid fields
+        allowed_fields = ["password", "account_type", "email"] 
         if field not in allowed_fields:
             raise ValueError(f"Invalid field name: {field}")
 
-        update_data_query = f"UPDATE users SET {field} = %s WHERE username = %s;"
+        update_data_query = f"UPDATE users SET {field} = ? WHERE username = ?;"
 
         try:
             db_connection, db_cursor = self.open_db()
@@ -249,11 +228,16 @@ class Database:
         db_cursor = None
         add_msg_query = """INSERT INTO messages (sender_id, receiver_id, content)
                             VALUES (
-                            (SELECT id from USERS WHERE username = %s),
-                            (SELECT id from USERS WHERE username = %s),
-                            %s
+                            (SELECT id from USERS WHERE username = ?),
+                            (SELECT id from USERS WHERE username = ?),
+                            ?
                             );"""
         try:
+            if not self.check_user_in_db(sender):
+                raise ValueError(f"Sender '{sender}' does not exist")
+            if not self.check_user_in_db(username):
+                raise ValueError(f"Receiver '{username}' does not exist")
+    
             db_connection, db_cursor = self.open_db()
             if db_connection is None:
                 print("Database connection unavailable - rejecting operation")
@@ -291,9 +275,9 @@ class Database:
         """
         db_connection = None
         db_cursor = None
-        read_msg_query = """SELECT sender_id, content, timestamp FROM messages WHERE receiver_id = (SELECT id from users WHERE username = %s);"""
-        get_username_query = """SELECT username FROM users WHERE id = %s"""
-        delete_read_msg_query = """DELETE FROM messages WHERE receiver_id = (SELECT id from users WHERE username = %s);"""
+        read_msg_query = """SELECT sender_id, content, timestamp FROM messages WHERE receiver_id = (SELECT id from users WHERE username = ?);"""
+        get_username_query = """SELECT username FROM users WHERE id = ?"""
+        delete_read_msg_query = """DELETE FROM messages WHERE receiver_id = (SELECT id from users WHERE username = ?);"""
         messages = []
         try:
             db_connection, db_cursor = self.open_db()
@@ -343,7 +327,7 @@ class Database:
         """
         db_connection = None
         db_cursor = None
-        check_user_inbox_query = """SELECT * FROM messages WHERE receiver_id = (SELECT id from users WHERE username = %s);"""
+        check_user_inbox_query = """SELECT * FROM messages WHERE receiver_id = (SELECT id from users WHERE username = ?);"""
         try:
             db_connection, db_cursor = self.open_db()
             if db_connection is None:
@@ -394,9 +378,6 @@ class Database:
         Returns:
             The loaded database dictionary.
         """
-        # db_connection = psycopg2.connect(host="localhost", dbname = self.DB_FILE, user=self.DB_USER, password=self.DB_PASSWORD, port=self.DB_PORT)
-        # db_cursor = db_connection.cursor()
-        # return db_connection, db_cursor
         try:
             return self.CONNECTION_POOL.get_connection()
         except Exception as e:
@@ -404,9 +385,6 @@ class Database:
             return None, None
 
     def close_db(self, connection, cursor):
-        # if connection:
-        #     cursor.close()
-        #     connection.close()
         self.CONNECTION_POOL.return_connection(connection, cursor)
 
 

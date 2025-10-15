@@ -29,25 +29,26 @@ class DatabaseConfig:
     DB_PASSWORD: str = "postgres"
     DB_PORT: int = 5432
     MAX_INBOX_SIZE: int = 5
+    
+    # Table creation queries (separate from index creation)
     CREATE_USER_TABLE_QUERY = """CREATE TABLE IF NOT EXISTS users(
-        id SERIAL PRIMARY KEY,
+        id INTEGER PRIMARY KEY,
         username     TEXT            NOT NULL UNIQUE,
         password     TEXT            NOT NULL,
         account_type TEXT
-        );
-        CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-        """
+        )"""
+    
+    CREATE_USER_INDEX_QUERY = """CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)"""
+    
     CREATE_MESSAGE_TABLE_QUERY = """CREATE TABLE IF NOT EXISTS messages(
-        id SERIAL   PRIMARY KEY,
-        sender_id   INTEGER         NOT NULL REFERENCES users(id),
-        receiver_id INTEGER         NOT NULL REFERENCES users(id),
-        timestamp   TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        content     TEXT            NOT NULL,
-        CONSTRAINT fk_sender FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE RESTRICT,
-        CONSTRAINT fk_receiver FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE RESTRICT
-        );
-        CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id);
-        """
+        id INTEGER PRIMARY KEY,
+        sender_id   INTEGER         NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+        receiver_id INTEGER         NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+        timestamp   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        content     TEXT            NOT NULL
+        )"""
+    
+    CREATE_MESSAGE_INDEX_QUERY = """CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id)"""
 
 
 @dataclass(frozen=True)
